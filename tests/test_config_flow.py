@@ -84,6 +84,29 @@ async def test_setup_suggests_home_country_without_foreign_station(hass, aioclie
     assert result["data"][CONF_COUNTRY] == "NL"
 
 
+async def test_forms_are_serializable_for_the_frontend(hass, aioclient_mock) -> None:
+    """The HTTP view serialises every form; an unconvertible validator is a 500."""
+    import voluptuous_serialize
+    from homeassistant.helpers import config_validation as cv
+
+    result = await _start(hass)
+    voluptuous_serialize.convert(result["data_schema"], custom_serializer=cv.custom_serializer)
+
+    entry = await _setup_entry(hass, aioclient_mock)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    voluptuous_serialize.convert(result["data_schema"], custom_serializer=cv.custom_serializer)
+
+
+async def test_invalid_country_code_is_reported(hass, aioclient_mock) -> None:
+    mock_apis(aioclient_mock)
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_COUNTRY: "NLD"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_COUNTRY: "invalid_country"}
+
+
 @pytest.mark.parametrize(
     ("status", "error"),
     [

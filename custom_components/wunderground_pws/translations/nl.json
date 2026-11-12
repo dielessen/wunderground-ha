@@ -37,6 +37,7 @@
       "station_id_required": "Het stations-ID mag niet leeg zijn.",
       "discovery_failed": "Er is automatisch geen API-sleutel gevonden. Voer zelf een sleutel in.",
       "invalid_source": "Kies één bron voor de weersverwachting.",
+      "invalid_country": "Vul een landcode van twee letters in (bijvoorbeeld NL) of laat het veld leeg.",
       "netherlands_required": "Voor deze bron moet de landcode van de plaats NL zijn.",
       "weerlive_key_required": "Voer je persoonlijke Weerlive-API-sleutel van weerlive.nl/delen.php in."
     },
@@ -68,6 +69,7 @@
       "unknown_station": "Het station is niet gevonden of heeft geen recente metingen doorgegeven.",
       "discovery_failed": "Er is automatisch geen API-sleutel gevonden. Voer zelf een sleutel in.",
       "invalid_source": "Kies één bron voor de weersverwachting.",
+      "invalid_country": "Vul een landcode van twee letters in (bijvoorbeeld NL) of laat het veld leeg.",
       "netherlands_required": "Voor deze bron moet de landcode van de plaats NL zijn.",
       "weerlive_key_required": "Voer je persoonlijke Weerlive-API-sleutel van weerlive.nl/delen.php in."
     }

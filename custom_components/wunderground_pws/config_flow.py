@@ -17,6 +17,7 @@ Plan: PLAN.md v1.5.0 - B12 (typed errors), B13 (station is fixed), B06, F18, S12
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -74,6 +75,12 @@ from .settings import get_setting
 
 _LOGGER = logging.getLogger(__name__)
 
+# Empty or a two-letter ISO country code. Checked in the step handlers, not in
+# the schema: the frontend serialises the schema with voluptuous_serialize,
+# which cannot convert ``str.strip`` / ``vol.Match`` - that made the whole
+# flow fail to load with "500 Internal Server Error".
+_COUNTRY_RE = re.compile(r"^(?:[A-Z]{2})?$")
+
 _KEY_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 # Translated drop-down (labels: ``selector.forecast_source.options.*``).
 _SOURCE_SELECTOR = SelectSelector(
@@ -129,6 +136,8 @@ def _scan_interval_validator() -> vol.All:
 
 def _provider_errors(source: str, country: str, weerlive_key: str) -> dict[str, str]:
     """Validate selection before saving credentials or attempting WU discovery."""
+    if not _COUNTRY_RE.match(country):
+        return {CONF_COUNTRY: "invalid_country"}
     if source not in FORECAST_SOURCES:
         return {CONF_FORECAST_SOURCE: "invalid_source"}
     if source in (FORECAST_SOURCE_WEERLIVE, FORECAST_SOURCE_BUIENRADAR) and country != "NL":
@@ -197,9 +206,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                 ): str,
                 vol.Optional(CONF_API_KEY, default=""): _KEY_SELECTOR,
                 vol.Optional(CONF_WEERLIVE_API_KEY, default=""): _KEY_SELECTOR,
-                vol.Optional(CONF_COUNTRY, default=self.hass.config.country or ""): vol.All(
-                    str, str.strip, str.upper, vol.Match(r"^(?:[A-Z]{2})?$")
-                ),
+                vol.Optional(CONF_COUNTRY, default=self.hass.config.country or ""): str,
                 vol.Required(
                     CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
                 ): _scan_interval_validator(),
@@ -443,7 +450,7 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_CITY, default=get_setting(entry, CONF_CITY, DEFAULT_CITY)): str,
                 vol.Optional(
                     CONF_COUNTRY, default=get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
-                ): vol.All(str, str.strip, str.upper, vol.Match(r"^(?:[A-Z]{2})?$")),
+                ): str,
                 vol.Optional(
                     CONF_FORECAST_SOURCE,
                     default=get_setting(entry, CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE),

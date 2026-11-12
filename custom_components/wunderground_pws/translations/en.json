@@ -37,6 +37,7 @@
       "station_id_required": "The station ID cannot be empty.",
       "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually.",
       "invalid_source": "Select one forecast provider.",
+      "invalid_country": "Enter a two-letter country code (for example NL) or leave it empty.",
       "netherlands_required": "This forecast provider requires city country code NL.",
       "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     },
@@ -68,6 +69,7 @@
       "unknown_station": "The station was not found or has not reported recent data.",
       "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually.",
       "invalid_source": "Select one forecast provider.",
+      "invalid_country": "Enter a two-letter country code (for example NL) or leave it empty.",
       "netherlands_required": "This forecast provider requires city country code NL.",
       "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     }

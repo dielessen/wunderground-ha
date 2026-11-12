@@ -8,7 +8,7 @@ Bring your Weather Underground personal weather station into Home Assistant and
 choose **one of six forecast providers**, including Dutch forecast sources.
 The interface supports **Dutch and English** and follows your Home Assistant language.
 
-**Current integration version: 1.8.1 · Updated: 12 November 2026 · Default branch: main**
+**Current integration version: 1.8.2 · Updated: 12 November 2026 · Default branch: main**
 
 - **Your station:** current measurements, derived weather values and station health.
 - **Your forecast:** Open-Meteo, KNMI via Open-Meteo, MET Norway, Weather Underground,

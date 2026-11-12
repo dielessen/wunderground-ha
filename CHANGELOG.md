@@ -5,6 +5,18 @@ records remain in Git history. Original author: Aiasz; see CREDITS.md.
 
 ## Unreleased
 
+## 1.8.2 — 2026-11-12
+
+### Fixed
+
+- Fix "Config flow could not be loaded: 500 Internal Server Error" when adding
+  the integration or opening its options. The country field used validators
+  (`str.strip`, `vol.Match`) that Home Assistant cannot serialise for the
+  frontend; the field is now a plain text field and the two-letter country code
+  is validated in the flow, with a translated `invalid_country` error.
+- Add regression tests that serialise the setup and options forms the way the
+  Home Assistant frontend does.
+
 ### Documentation
 
 - Update installation and update instructions for the built-in Home Assistant

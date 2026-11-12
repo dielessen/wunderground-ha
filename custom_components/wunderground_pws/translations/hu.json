@@ -37,6 +37,7 @@
       "station_id_required": "Az állomás azonosító nem lehet üres.",
       "discovery_failed": "Az automatikus kulcskeresés nem talált kulcsot. Add meg kézzel.",
       "invalid_source": "Select one forecast provider.",
+      "invalid_country": "Adjon meg egy kétbetűs országkódot (például NL), vagy hagyja üresen.",
       "netherlands_required": "This forecast provider requires city country code NL.",
       "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     },
@@ -68,6 +69,7 @@
       "unknown_station": "Az állomás nem található, vagy nem küldött friss adatot.",
       "discovery_failed": "Az automatikus kulcskeresés nem talált kulcsot. Add meg kézzel.",
       "invalid_source": "Select one forecast provider.",
+      "invalid_country": "Adjon meg egy kétbetűs országkódot (például NL), vagy hagyja üresen.",
       "netherlands_required": "This forecast provider requires city country code NL.",
       "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     }
