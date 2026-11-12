@@ -3,6 +3,16 @@
 Historical upstream releases below are English summaries. The original detailed
 records remain in Git history. Original author: Aiasz; see CREDITS.md.
 
+## 1.8.1 — 2026-11-12
+
+- Add a complete Dutch Home Assistant translation alongside English, preserving
+  the existing Hungarian translation and entity identifiers.
+- Translate setup/options, errors, provider/model choices, sensors, enum states,
+  compass directions and refresh action descriptions.
+- Add Dutch discovery status text and check translation completeness, placeholders
+  and provider/enum coverage for every supported language.
+- Keep English as the default source language and repository documentation language.
+
 ## 1.8.0 — 2026-11-12
 
 - Add a single forecast provider selector: Open-Meteo, KNMI via Open-Meteo,

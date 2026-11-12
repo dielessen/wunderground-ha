@@ -3,6 +3,17 @@
 Personal Weather Underground station measurements with **one selectable forecast provider**.
 Maintained by dielessen, based on Aiasz’s MIT-licensed integration. See [CREDITS](CREDITS.md).
 
+## Languages
+
+The Home Assistant interface supports **Dutch and English**, including setup,
+options, errors, forecast provider choices, entity names, enum states and the
+refresh action. Dutch compass directions use N/O/Z/W. The existing Hungarian
+translation is retained. The interface follows the language selected in your
+Home Assistant profile; no separate integration language selector is needed.
+Automatic discovery status text follows Home Assistant's configured language.
+Previously customized entity names are not overwritten when changing language.
+Repository documentation remains in English.
+
 ## Forecast providers
 
 Select one provider in setup or in the integration options. The integration uses

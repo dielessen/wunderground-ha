@@ -1,0 +1,307 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wunderground PWS instellen",
+        "description": "Voer je Weather Underground-stations-ID en API-sleutel voor metingen in (optioneel: automatisch zoeken). Kies één bron voor de weersverwachting. Verwachtingen worden niet gecombineerd; bij ontbrekende uren of storingen wordt geen andere bron gebruikt. Weather Underground en Buienradar leveren alleen dagverwachtingen. Voor Weerlive zijn een eigen sleutel en landcode NL nodig. Buienradar vereist ook NL en levert een landelijke verwachting. De keuze van het Open-Meteo-weermodel geldt alleen voor de bron Open-Meteo.",
+        "data": {
+          "station_id": "Je Weather Underground-stations-ID",
+          "api_key": "API-sleutel (leeg = automatisch zoeken)",
+          "scan_interval": "Bijwerkinterval (minuten)",
+          "city": "Plaats voor de verwachting en terugvalbron (optioneel)",
+          "forecast_source": "Bron voor de weersverwachting",
+          "country_code": "Landcode van de plaats (bijv. NL); leeg schakelt de openbare pagina als terugvalbron uit",
+          "weerlive_api_key": "Persoonlijke Weerlive-API-sleutel (alleen voor Weerlive)"
+        }
+      },
+      "discover": {
+        "title": "API-sleutel bevestigen",
+        "description": "Automatisch zoeken naar een API-sleutel voor station {station_id}: **{discovery_status}**.\n\nControleer de onderstaande sleutel of voer je eigen sleutel in als het zoeken niet is gelukt.",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Wunderground PWS opnieuw aanmelden",
+        "description": "De API-sleutel van station {station_id} werkt niet meer. Voer een nieuwe sleutel in of laat het veld leeg om opnieuw automatisch te zoeken.",
+        "data": {
+          "api_key": "API-sleutel (leeg = automatisch zoeken)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen verbinding maken met de Weather Underground-API. Probeer het later opnieuw.",
+      "invalid_auth": "Weather Underground heeft de API-sleutel geweigerd.",
+      "unknown_station": "Het station is niet gevonden of heeft geen recente metingen doorgegeven. Controleer het stations-ID.",
+      "api_key_required": "De API-sleutel mag niet leeg zijn.",
+      "station_id_required": "Het stations-ID mag niet leeg zijn.",
+      "discovery_failed": "Er is automatisch geen API-sleutel gevonden. Voer zelf een sleutel in.",
+      "invalid_source": "Kies één bron voor de weersverwachting.",
+      "netherlands_required": "Voor deze bron moet de landcode van de plaats NL zijn.",
+      "weerlive_key_required": "Voer je persoonlijke Weerlive-API-sleutel van weerlive.nl/delen.php in."
+    },
+    "abort": {
+      "already_configured": "Dit station is al ingesteld.",
+      "reauth_successful": "De API-sleutel is bijgewerkt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wunderground PWS-instellingen (station {station_id})",
+        "description": "Het stations-ID kan niet worden gewijzigd; voeg een nieuwe integratie toe voor een ander weerstation. Als je de WU-sleutel wist, wordt automatisch naar een sleutel gezocht. Kies één bron voor de weersverwachting. Verwachtingen worden niet gecombineerd; bij ontbrekende uren of storingen wordt geen andere bron gebruikt. Weather Underground en Buienradar leveren alleen dagverwachtingen. Voor Weerlive zijn een eigen sleutel en landcode NL nodig. Buienradar vereist ook NL en levert een landelijke verwachting. De keuze van het Open-Meteo-weermodel geldt alleen voor de bron Open-Meteo.",
+        "data": {
+          "api_key": "API-sleutel (leeg = automatisch zoeken)",
+          "scan_interval": "Bijwerkinterval (minuten)",
+          "city": "Plaats voor de verwachting en terugvalbron (optioneel)",
+          "forecast_source": "Bron voor de weersverwachting",
+          "openmeteo_model": "Open-Meteo-weermodel",
+          "enable_air_quality": "Luchtkwaliteits- en pollensensoren (extra API-aanroep per verversing)",
+          "country_code": "Landcode van de plaats (bijv. NL); leeg schakelt de openbare pagina als terugvalbron uit",
+          "weerlive_api_key": "Persoonlijke Weerlive-API-sleutel (alleen voor Weerlive)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen verbinding maken met de Weather Underground-API. Probeer het later opnieuw.",
+      "invalid_auth": "Weather Underground heeft de API-sleutel geweigerd.",
+      "unknown_station": "Het station is niet gevonden of heeft geen recente metingen doorgegeven.",
+      "discovery_failed": "Er is automatisch geen API-sleutel gevonden. Voer zelf een sleutel in.",
+      "invalid_source": "Kies één bron voor de weersverwachting.",
+      "netherlands_required": "Voor deze bron moet de landcode van de plaats NL zijn.",
+      "weerlive_key_required": "Voer je persoonlijke Weerlive-API-sleutel van weerlive.nl/delen.php in."
+    }
+  },
+  "selector": {
+    "forecast_source": {
+      "options": {
+        "openmeteo": "Open-Meteo (wereldwijd; per dag en per uur)",
+        "knmi": "KNMI via Open-Meteo (HARMONIE + ECMWF; per dag en per uur)",
+        "metno": "MET Norway (per dag en per uur)",
+        "wunderground": "Weather Underground (alleen per dag)",
+        "weerlive": "Weerlive (Nederland; 5 dagen / 24 uur; sleutel vereist)",
+        "buienradar": "Buienradar (landelijk Nederland; 5 dagen; alleen per dag)"
+      }
+    },
+    "openmeteo_model": {
+      "options": {
+        "best_match": "Beste overeenkomst (automatisch)",
+        "ecmwf_ifs": "ECMWF IFS (9 km)",
+        "dwd_icon_eu": "DWD ICON-EU (7 km)",
+        "dwd_icon_seamless": "DWD ICON naadloos"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatuur"
+      },
+      "feels_like": {
+        "name": "Gevoelstemperatuur"
+      },
+      "dew_point": {
+        "name": "Dauwpunt"
+      },
+      "heat_index": {
+        "name": "Hitte-index"
+      },
+      "wind_chill": {
+        "name": "Windchill"
+      },
+      "wet_bulb": {
+        "name": "Natteboltemperatuur"
+      },
+      "humidity": {
+        "name": "Luchtvochtigheid"
+      },
+      "pressure": {
+        "name": "Luchtdruk"
+      },
+      "wind_speed": {
+        "name": "Windsnelheid"
+      },
+      "wind_gust": {
+        "name": "Windstoot"
+      },
+      "wind_bearing": {
+        "name": "Windrichting in graden"
+      },
+      "wind_compass": {
+        "name": "Windrichting",
+        "state": {
+          "n": "N",
+          "nne": "NNO",
+          "ne": "NO",
+          "ene": "ONO",
+          "e": "O",
+          "ese": "OZO",
+          "se": "ZO",
+          "sse": "ZZO",
+          "s": "Z",
+          "ssw": "ZZW",
+          "sw": "ZW",
+          "wsw": "WZW",
+          "w": "W",
+          "wnw": "WNW",
+          "nw": "NW",
+          "nnw": "NNW"
+        }
+      },
+      "wind_compass_hu": {
+        "name": "Windrichting (Hongaars)"
+      },
+      "precipitation_rate": {
+        "name": "Neerslagintensiteit"
+      },
+      "precipitation_today": {
+        "name": "Neerslag (vandaag)"
+      },
+      "solar_radiation": {
+        "name": "Zonnestraling"
+      },
+      "absolute_humidity": {
+        "name": "Absolute luchtvochtigheid"
+      },
+      "cloud_base": {
+        "name": "Wolkenbasis"
+      },
+      "uv_index": {
+        "name": "UV-index"
+      },
+      "observation_age": {
+        "name": "Ouderdom van de meting"
+      },
+      "temperature_max_today": {
+        "name": "Temperatuur (maximum vandaag)"
+      },
+      "temperature_min_today": {
+        "name": "Temperatuur (minimum vandaag)"
+      },
+      "wind_gust_max_today": {
+        "name": "Windstoot (maximum vandaag)"
+      },
+      "pressure_change_3h": {
+        "name": "Luchtdrukverandering (3 uur)"
+      },
+      "pressure_tendency": {
+        "name": "Luchtdruktrend",
+        "state": {
+          "rising": "Stijgend",
+          "steady": "Gelijkblijvend",
+          "falling": "Dalend"
+        }
+      },
+      "wu_api_calls_today": {
+        "name": "Weather Underground-API-aanroepen vandaag"
+      },
+      "forecast_updated": {
+        "name": "Weersverwachting bijgewerkt"
+      },
+      "forecast_source": {
+        "name": "Gebruikte bron voor de weersverwachting",
+        "state": {
+          "wunderground": "Weather Underground",
+          "metno": "MET Norway",
+          "openmeteo": "Open-Meteo",
+          "knmi": "KNMI via Open-Meteo",
+          "weerlive": "Weerlive",
+          "buienradar": "Buienradar (landelijk Nederland)"
+        }
+      },
+      "forecast_mae_wunderground": {
+        "name": "Voorspellingsfout: Weather Underground"
+      },
+      "forecast_mae_metno": {
+        "name": "Voorspellingsfout: MET Norway"
+      },
+      "forecast_mae_openmeteo": {
+        "name": "Voorspellingsfout: Open-Meteo"
+      },
+      "observation_source": {
+        "name": "Bron van de metingen",
+        "state": {
+          "wunderground_api": "Weather Underground API",
+          "wu_citypage": "Weather Underground (openbare pagina, zonder sleutel)"
+        }
+      },
+      "source_station_id": {
+        "name": "Station van de terugvalbron"
+      },
+      "uv_level": {
+        "name": "UV-niveau",
+        "state": {
+          "low": "Laag",
+          "moderate": "Matig",
+          "high": "Hoog",
+          "very_high": "Zeer hoog",
+          "extreme": "Extreem"
+        }
+      },
+      "european_aqi": {
+        "name": "Europese luchtkwaliteitsindex"
+      },
+      "us_aqi": {
+        "name": "Amerikaanse luchtkwaliteitsindex"
+      },
+      "pm2_5": {
+        "name": "PM2.5"
+      },
+      "pm10": {
+        "name": "PM10"
+      },
+      "nitrogen_dioxide": {
+        "name": "Stikstofdioxide (NO₂)"
+      },
+      "sulphur_dioxide": {
+        "name": "Zwaveldioxide (SO₂)"
+      },
+      "ozone": {
+        "name": "Ozon (O₃)"
+      },
+      "carbon_monoxide": {
+        "name": "Koolmonoxide (CO)"
+      },
+      "pollen_alder": {
+        "name": "Elzenpollen"
+      },
+      "pollen_birch": {
+        "name": "Berkenpollen"
+      },
+      "pollen_grass": {
+        "name": "Graspollen"
+      },
+      "pollen_mugwort": {
+        "name": "Bijvoetpollen"
+      },
+      "pollen_olive": {
+        "name": "Olijfpollen"
+      },
+      "pollen_ragweed": {
+        "name": "Ambrosiapollen"
+      },
+      "sunshine_duration": {
+        "name": "Zonduur (vandaag)"
+      }
+    },
+    "binary_sensor": {
+      "station_online": {
+        "name": "Station online"
+      },
+      "uv_protection_needed": {
+        "name": "Uv-bescherming nodig"
+      }
+    },
+    "weather": {
+      "weather": {
+        "name": "Weer"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Nu verversen",
+      "description": "Ververst direct de stationsmetingen en de weersverwachting van alle Wunderground PWS-integraties."
+    }
+  }
+}

@@ -98,6 +98,7 @@ _MODEL_SELECTOR = SelectSelector(
 _DISCOVERY_STATUS = {
     "hu": {True: "megtalálva", False: "nem található"},
     "en": {True: "found", False: "not found"},
+    "nl": {True: "gevonden", False: "niet gevonden"},
 }
 
 
@@ -265,7 +266,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                     return self._create_entry(api_key, source)
                 errors["base"] = error
 
-        language = (self.hass.config.language or "en").split("-")[0]
+        language = (self.hass.config.language or "en").split("-")[0].lower()
         status = _DISCOVERY_STATUS.get(language, _DISCOVERY_STATUS["en"])[
             bool(self._discovered_key)
         ]

@@ -142,6 +142,23 @@ async def test_discovery_failure_allows_manual_entry(hass, aioclient_mock) -> No
     assert result["data"][CONF_API_KEY_SOURCE] == API_KEY_SOURCE_MANUAL  # typed by the user
 
 
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [("nl", "gevonden"), ("nl-NL", "gevonden"), ("en", "found"), ("en-GB", "found")],
+)
+async def test_discovery_status_follows_supported_language(
+    hass, aioclient_mock, language, expected
+) -> None:
+    hass.config.language = language
+    mock_apis(aioclient_mock)
+    aioclient_mock.get(DASHBOARD, text=load_text("wu_dashboard.html"))
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_API_KEY: ""}
+    )
+    assert result["description_placeholders"]["discovery_status"] == expected
+
+
 async def test_duplicate_station_is_aborted(hass, aioclient_mock) -> None:
     mock_apis(aioclient_mock)
     make_entry().add_to_hass(hass)
