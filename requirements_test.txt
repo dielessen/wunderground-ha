@@ -1,3 +1,4 @@
 # Test / lint dependencies (see docs/DEVELOPMENT.md)
 pytest-homeassistant-custom-component
 ruff
+voluptuous-serialize
