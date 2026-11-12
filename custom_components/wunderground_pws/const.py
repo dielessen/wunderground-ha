@@ -17,13 +17,16 @@ DOMAIN = "wunderground_pws"
 # station id fixed for the lifetime of the entry (see ``async_migrate_entry``).
 CONFIG_ENTRY_VERSION = 3
 
-DEFAULT_STATION_ID = "IKAPOS27"
+DEFAULT_STATION_ID = ""
 DEFAULT_SCAN_INTERVAL = 5  # minutes
 MIN_SCAN_INTERVAL = 1
 MAX_SCAN_INTERVAL = 60
 DEFAULT_CITY = ""
-# Pre-filled (not forced) in the setup form: the development/test reference city.
-SUGGESTED_CITY = "Kaposvár"
+# New installations must select their own location.
+SUGGESTED_CITY = ""
+CONF_COUNTRY = "country_code"
+# Preserve the original fallback region for entries created before this setting.
+LEGACY_COUNTRY = "HU"
 
 # --- Forecast sources --------------------------------------------------------
 FORECAST_SOURCE_AUTO = "auto"  # WU -> MET.no -> Open-Meteo (fallback chain)

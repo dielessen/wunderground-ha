@@ -51,13 +51,15 @@ _DAILY_VARIABLES = ",".join(
 
 
 async def geocode(
-    session: aiohttp.ClientSession, city: str, language: str = "en"
+    session: aiohttp.ClientSession, city: str, language: str = "en", country: str = ""
 ) -> tuple[float, float]:
     """Resolve a place name to ``(lat, lon)`` with the Open-Meteo geocoder.
 
     Raises :class:`ProviderNoDataError` when the name is unknown.
     """
     params = {"name": city, "count": 1, "language": language, "format": "json"}
+    if country:
+        params["countryCode"] = country.upper()
     _, payload, _ = await request_json(
         session,
         OPEN_METEO_GEOCODING_URL,

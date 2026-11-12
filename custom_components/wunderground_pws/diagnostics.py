@@ -18,7 +18,20 @@ from homeassistant.util import dt as dt_util
 from .const import ATTR_LAT, ATTR_LON, CONF_API_KEY, CONF_CITY
 from .coordinator import WundergroundConfigEntry
 
-TO_REDACT = {CONF_API_KEY, CONF_CITY, ATTR_LAT, ATTR_LON, "latitude", "longitude"}
+TO_REDACT = {
+    CONF_API_KEY,
+    CONF_CITY,
+    ATTR_LAT,
+    ATTR_LON,
+    "latitude",
+    "longitude",
+    "station_id",
+    "source_station_id",
+    "location_name",
+    "location",
+    "source_station_name",
+    "country_code",
+}
 
 
 async def async_get_config_entry_diagnostics(
@@ -39,7 +52,7 @@ async def async_get_config_entry_diagnostics(
         "ha_language": hass.config.language,
         "observation": {
             "last_update_success": coordinator.last_update_success,
-            "last_exception": repr(coordinator.last_exception)
+            "last_exception": type(coordinator.last_exception).__name__
             if coordinator.last_exception
             else None,
             "scan_interval_min": coordinator.scan_interval,

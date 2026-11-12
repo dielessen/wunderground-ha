@@ -21,6 +21,16 @@ def test_page_url_encodes_accented_city_names() -> None:
     assert wu_citypage.page_url("Pécs", "hu") == "https://www.wunderground.com/weather/hu/P%C3%A9cs"
 
 
+def test_page_url_uses_selected_country_and_encodes_path_separators() -> None:
+    assert (
+        wu_citypage.page_url(" Amsterdam ", "NL")
+        == "https://www.wunderground.com/weather/nl/Amsterdam"
+    )
+    assert wu_citypage.page_url("a/b", "NL").endswith("/a%2Fb")
+    with pytest.raises(ProviderError):
+        wu_citypage.page_url("Amsterdam", "../hu")
+
+
 def test_parse_observation_matches_the_real_live_page() -> None:
     """Captured live from wunderground.com/weather/hu/kaposvár on 2026-10-31."""
     obs = wu_citypage.parse_observation(FIXTURE_HTML)
@@ -93,7 +103,7 @@ async def test_fetch_observation_builds_the_right_url_and_parses(hass, aioclient
     aioclient_mock.get(wu_citypage.page_url("Kaposvár"), text=FIXTURE_HTML)
     obs = await wu_citypage.fetch_observation(async_get_clientsession(hass), "Kaposvár")
     assert obs["temperature"] == 9.0
-    assert aioclient_mock.mock_calls[0][3]["Accept-Language"].startswith("hu")
+    assert aioclient_mock.mock_calls[0][3]["Accept-Language"].startswith("en")
 
 
 async def test_fetch_observation_propagates_http_errors(hass, aioclient_mock) -> None:

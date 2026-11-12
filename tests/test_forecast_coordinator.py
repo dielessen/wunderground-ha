@@ -35,7 +35,7 @@ async def test_coords_available_immediately_after_restart_within_ttl(hass, freez
     entry.add_to_hass(hass)
 
     await Store(hass, 1, f"{DOMAIN}.geocode.{entry.entry_id}").async_save(
-        {"kaposvár": [46.36667, 17.8]}
+        {"HU:kaposvár": [46.36667, 17.8]}
     )
     await Store(hass, 1, f"{DOMAIN}.forecast.{entry.entry_id}").async_save(
         {
@@ -70,3 +70,19 @@ async def test_coords_fall_back_to_station_location_without_a_city(hass, freezer
     await forecast.async_load_persisted()
 
     assert forecast.coords == (46.1, 18.2)
+
+
+async def test_geocode_cache_does_not_reuse_another_country(hass, aioclient_mock) -> None:
+    from custom_components.wunderground_pws.const import OPEN_METEO_GEOCODING_URL
+
+    entry = make_entry(data={CONF_CITY: "Amsterdam", "country_code": "NL"})
+    entry.add_to_hass(hass)
+    await Store(hass, 1, f"{DOMAIN}.geocode.{entry.entry_id}").async_save(
+        {"HU:amsterdam": [46.0, 17.0], "amsterdam": [46.0, 17.0]}
+    )
+    aioclient_mock.get(
+        OPEN_METEO_GEOCODING_URL, json={"results": [{"latitude": 52.37, "longitude": 4.90}]}
+    )
+    forecast = await _make_forecast(hass, entry)
+    await forecast.async_load_persisted()
+    assert forecast.coords == (52.37, 4.90)

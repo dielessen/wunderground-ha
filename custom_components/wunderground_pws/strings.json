@@ -3,13 +3,14 @@
     "step": {
       "user": {
         "title": "Set up Wunderground PWS",
-        "description": "Enter the Weather Underground station ID (e.g. IKAPOS27). The API key is optional: if you leave it empty, the integration tries to obtain one automatically (demo mode). Entering a forecast city shows a 7-day forecast on the weather card, and also lets the integration fall back to a public, no-key Weather Underground page for that city if the station's own API is ever unavailable.",
+        "description": "Enter the Weather Underground station ID. The API key is optional: if you leave it empty, the integration tries to obtain one automatically (demo mode). Entering a forecast city shows a 7-day forecast on the weather card, and also lets the integration fall back to a public, no-key Weather Underground page for that city if the station's own API is ever unavailable.",
         "data": {
-          "station_id": "Station ID (e.g. IKAPOS27)",
+          "station_id": "Your Weather Underground station ID",
           "api_key": "API key (empty = automatic discovery)",
           "scan_interval": "Update interval (minutes)",
-          "city": "Forecast / fallback city (e.g. Kaposvár) - optional",
-          "forecast_source": "Forecast source"
+          "city": "Forecast / fallback city (optional)",
+          "forecast_source": "Forecast source",
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
         }
       },
       "discover": {
@@ -48,10 +49,11 @@
         "data": {
           "api_key": "API key (empty = automatic discovery)",
           "scan_interval": "Update interval (minutes)",
-          "city": "Forecast / fallback city (e.g. Kaposvár) - optional",
+          "city": "Forecast / fallback city (optional)",
           "forecast_source": "Forecast source",
           "openmeteo_model": "Open-Meteo weather model",
-          "enable_air_quality": "Air quality & pollen sensors (extra API call per refresh)"
+          "enable_air_quality": "Air quality & pollen sensors (extra API call per refresh)",
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
         }
       }
     },

@@ -1,203 +1,166 @@
-# Wunderground PWS – Home Assistant integráció
+# Wunderground PWS – Home Assistant integration
 
-**Készítő: Aiasz · Verzió: 1.7.1 · [English README](README.en.md)**
+**Maintained by dielessen · Based on Aiasz’s Wunderground PWS integration (MIT)**
 
-Bármelyik [Weather Underground](https://www.wunderground.com/) személyes időjárás-állomás (PWS) adatait
-megjeleníti a Home Assistantban – az **official WU API**-n keresztül, metrikus egységekkel – és mellé
-**több szolgáltatóból** (Weather Underground, MET Norway, Open-Meteo) ad előrejelzést automatikus
-tartalék-lánccal. Magyar és angol nyelven használható.
+Shows the data of any [Weather Underground](https://www.wunderground.com/) personal weather station (PWS)
+in Home Assistant through the **official WU API**, in metric units, and adds a **multi-provider forecast**
+(Weather Underground, MET Norway, Open-Meteo) with an automatic fallback chain. Available in English and Hungarian.
 
-> A fejlesztés iránya és ütemterve: lásd a [CHANGELOG](CHANGELOG.md)-ot. Köszönet az ötletgazdáknak: [CREDITS](CREDITS.md).
+> Roadmap and release notes: [CHANGELOG](CHANGELOG.md). Credits and idea sources: [CREDITS](CREDITS.md).
 
----
+## Features
 
-## Funkciók
+- **Your own station's measurements**: temperature, feels-like, dew point, heat index / wind chill, humidity,
+  pressure, wind (speed, gust, bearing, compass), precipitation (daily, rate), solar radiation, UV and derived
+  values (cloud base, absolute humidity, wet-bulb temperature).
+- **Weather entity** with a daily (7 days) **and hourly (72 h)** forecast.
+- **Multi-source forecast with fallback**: Weather Underground → MET Norway → Open-Meteo (or a single chosen source).
+- **Blend (consensus) mode**: all sources together; the integration scores each source against *your own station's measurements* and weights the more accurate one higher.
+- **Open-Meteo model choice**: automatic, ECMWF IFS, DWD ICON-EU.
+- **Today's min/max** temperature and gust, **pressure tendency** (rising / steady / falling).
+- **Diagnostics**: downloadable (redacted) diagnostics and a `wunderground_pws.refresh` service.
+- **English and Hungarian UI** – follows the Home Assistant language (entity names, options, wind direction).
+- **Station health**: `Station online` and `Observation age` diagnostic entities; glitchy readings are filtered out.
+- **Better "current condition"**: `clear-night`, snow/sleet, fog, strong wind, sky state from solar radiation.
+- **Resilient**: a failing forecast never blocks the measurements; the last good forecast is kept; the forecast
+  and the city geocoding are cached (fewer API calls).
+- **Demo mode** (optional API key): see below.
+- **No-key observation fallback**: if the WU API is unavailable and a forecast city is set, the
+  integration reads the nearest station's data from WU's public location page instead -
+  transparently marked (`observation_source`, `fallback_source_station`).
+- **UV level (WHO category) and a UV-protection binary sensor**: a category computed from the
+  UV index (low…extreme), plus a sensor that is `on` when protection is recommended - on by default.
+- **Air quality and pollen (optional)**: European and US AQI, 6 pollutants, 6 pollen species
+  (including ragweed) from Open-Meteo, no key needed - see below.
+- **Sunshine-duration (today) sensor**, and automatic filling of missing measurements (wind
+  gust, precipitation rate, solar radiation, UV) from an always-on, key-less Open-Meteo
+  supplement whenever your own measurement doesn't have them - transparently flagged
+  (`estimated` attribute) - see below.
 
-- **Saját állomás mérései**: hőmérséklet, érzett hőmérséklet, harmatpont, hőérzet/szélhűtési index, páratartalom,
-  légnyomás, szél (sebesség, lökés, irány fokban és égtájban), csapadék (napi, intenzitás), napsugárzás, UV,
-  számított értékek (felhőalap, abszolút páratartalom, nedves hőmérséklet).
-- **Weather entitás** napi (7 nap) **és óránkénti (72 óra)** előrejelzéssel.
-- **Többforrású előrejelzés fallback-kel**: Weather Underground → MET Norway → Open-Meteo (vagy egy kiválasztott forrás).
-- **Blend (konszenzus) mód**: az összes forrás együtt; a rendszer a *saját állomásod méréseivel* pontozza a forrásokat, és a pontosabbat nagyobb súllyal veszi.
-- **Open-Meteo modellválasztás**: automatikus, ECMWF IFS, DWD ICON-EU.
-- **Mai max/min** hőmérséklet és széllökés, **légnyomás-tendencia** (emelkedő/állandó/csökkenő).
-- **Diagnosztika**: letölthető (kiredaktált) diagnosztika, `wunderground_pws.refresh` szolgáltatás.
-- **Magyar és angol felület** – a Home Assistant nyelvét követi (entitásnevek, beállítások, szélirány).
-- **Állomás-állapot**: `Station online` és `Observation age` diagnosztikai entitás; kiugró mérések szűrése.
-- **Pontosabb állapotjelzés**: éjszaka `clear-night`, hó/ónos eső, köd, erős szél, derültség a napsugárzásból.
-- **Stabil működés**: a hibás előrejelzés nem érinti a mérések frissítését; az utolsó jó előrejelzés megmarad;
-  az előrejelzés és a város-geokódolás gyorsítótárazott (kevesebb API-hívás).
-- **Demo mód** (opcionális API kulcs): lásd lent.
-- **Megfigyelés-tartalék kulcs nélkül**: ha a WU API nem elérhető és be van állítva egy előrejelzési
-  város, az integráció a WU nyilvános, bejelentkezés nélküli városi oldaláról olvassa ki a legközelebbi
-  állomás mérését – átlátszóan jelölve (`observation_source`, `fallback_source_station`).
-- **UV-szint (WHO kategória) és UV-védelem riasztás**: az UV-indexből számolt kategória
-  (alacsony…extrém) és egy bináris szenzor, amely jelzi, ha védelem ajánlott – alapból bekapcsolva.
-- **Levegőminőség és pollen (opcionális)**: európai és amerikai AQI, 6 szennyezőanyag, 6 pollenfaj
-  (köztük a parlagfű) az Open-Meteóból, kulcs nélkül – lásd lent.
-- **Napfénytartam (ma) szenzor**, és a hiányzó mérések (széllökés, csapadék-intenzitás,
-  napsugárzás, UV) automatikus pótlása egy mindig aktív, kulcs nélküli Open-Meteo
-  kiegészítő lekérésből, amikor a saját mérés nem adja meg – átlátszóan jelölve
-  (`estimated` attribútum) – lásd lent.
-- **Beállítások újraindítás nélkül** módosíthatók (Configure).
+## Installation
 
-## Telepítés
+**HACS (recommended):** HACS → Integrations → `⋮` → *Custom repositories* → `https://github.com/dielessen/wunderground-ha`
+(category *Integration*) → install → restart Home Assistant.
+**Manual:** copy `custom_components/wunderground_pws` into `config/custom_components/` and restart.
+Minimum Home Assistant version: **2024.12.0**.
 
-**HACS (ajánlott):** HACS → Integrations → `⋮` → *Custom repositories* → `https://github.com/aiasz/ha-wunderground-pws`
-(kategória: *Integration*) → telepítés → Home Assistant újraindítása.
+## Setup
 
-**Manuálisan:** másold a `custom_components/wunderground_pws` mappát a `config/custom_components/` alá, indítsd újra a HA-t.
+*Settings → Devices & services → Add integration → "Wunderground PWS"*
 
-Minimum Home Assistant verzió: **2024.12.0**.
-
-## Beállítás
-
-*Settings → Devices & services → Add integration → „Wunderground PWS”*
-
-| Mező | Leírás |
+| Field | Description |
 |---|---|
-| Állomás azonosító | pl. `IKAPOS27` (az azonosító később nem módosítható – másik állomáshoz vegyél fel új bejegyzést) |
-| API kulcs | saját kulcs a [WU fiókodból](https://www.wunderground.com/member/api-keys); **üresen hagyva demo mód** |
-| Frissítési időköz | 1–60 perc (ajánlott: 5) |
-| Előrejelzési város | opcionális (pl. `Kaposvár`); üresen az állomás koordinátái |
-| Előrejelzés forrása | `auto` / `blend` / csak WU / csak MET Norway / csak Open-Meteo |
-| Open-Meteo modell | (opciókban) automatikus / ECMWF IFS / DWD ICON-EU / ICON seamless |
+| Station ID | e.g. `IKAPOS27` (cannot be changed later – add a new entry for another station) |
+| API key | your key from the [WU account](https://www.wunderground.com/member/api-keys); **empty = demo mode** |
+| Update interval | 1–60 minutes (5 recommended) |
+| Forecast city | optional; empty = the station's coordinates |
+| City country code | e.g. `NL`; filters geocoding and selects the fallback country |
+| Forecast source | `auto` / `blend` / WU only / MET Norway only / Open-Meteo only |
+| Open-Meteo model | (options) automatic / ECMWF IFS / DWD ICON-EU / ICON seamless |
 
-Az API kulcs és a többi beállítás később: *Configure*. Az üresen hagyott kulcs automatikus keresést indít.
+### Demo mode (no API key)
+With an empty key the integration tries to extract a public key embedded in the WU website and **validates it
+with a real call** before saving it. After a failed attempt it waits 15 minutes (max. 3 attempts), then Home Assistant
+asks you to re-authenticate. A key you typed yourself is never replaced automatically.
 
-### Demo mód (API kulcs nélkül)
-Üres kulcs esetén az integráció megpróbál egy, a WU weboldalába ágyazott nyilvános kulcsot kinyerni; a talált kulcsot
-egy valódi hívással **ellenőrzi**, mielőtt elmenti. Sikertelen keresés után 15 perc várakozás van (legfeljebb 3 próba),
-utána a Home Assistant újrahitelesítést kér. A kézzel megadott kulcsot az integráció soha nem cseréli le.
+> **Important:** the shared key can be refused by WU at any time (on 2026-10-31 the key extracted from the website
+> was already rejected by the observation endpoint). **For reliable, long-term use get your own API key** – WU gives it
+> free to PWS owners: <https://www.wunderground.com/member/api-keys>. Without a key the forecast can still come from
+> MET Norway / Open-Meteo (`metno` / `openmeteo` source); if a forecast **city** is also set, observations work
+> without a key too - from WU's own public location page (see "No-key observation fallback" below).
 
-> **Fontos:** a megosztott kulcsot a WU bármikor elutasíthatja (a 2026-10-31-i ellenőrzéskor a weboldalról kinyert kulcsot
-> már a megfigyelés végpont sem fogadta el). **Megbízható, tartós működéshez saját API kulcs kell** – a WU PWS-tulajdonosoknak
-> ingyen adja: <https://www.wunderground.com/member/api-keys>. Kulcs nélkül az előrejelzést a MET Norway / Open-Meteo is tudja
-> adni (forrás: `metno` vagy `openmeteo`); ha emellett egy előrejelzési **város** is be van állítva, a megfigyelés is
-> működik kulcs nélkül – a WU nyilvános városi oldaláról, a WU által kiválasztott legközelebbi állomás adatával
-> (lásd lent: „Megfigyelés-tartalék").
+### No-key observation fallback (works without an API key or demo mode)
+When the WU API is unavailable (no key, demo-mode key rejected) **and** a forecast **city** is set, the
+integration reads current conditions (temperature, humidity, pressure, wind, dew point, precipitation) from
+`wunderground.com/weather/{country}/{city}` - a genuinely server-rendered public page (unlike `/dashboard/pws/{id}`,
+which only fills in after JavaScript runs and therefore cannot be used here).
 
-### Megfigyelés-tartalék kulcs nélkül (API kulcs és demo mód nélkül is)
-Ha a WU API átmenetileg vagy tartósan nem elérhető (nincs kulcs, a demo mód kulcsa elutasítva), **és** be van
-állítva egy **előrejelzési város**, az integráció a `wunderground.com/weather/hu/{város}` nyilvános,
-bejelentkezés nélküli oldaláról olvassa ki az aktuális hőmérsékletet, páratartalmat, légnyomást, szelet,
-harmatpontot és csapadékot – ez egy valódi, a szerver által renderelt oldal (nem a `/dashboard/pws/{állomás}`
-oldal, amely csak JavaScript-tel töltődik fel, és amelyet ezért az integráció nem tud használni).
+**Known limits, worth knowing:**
+- This is WU's own choice of the *nearest* station for that city - **not necessarily** your own configured
+  station. For Kaposvár it is currently `IKAPOS10`, not `IKAPOS27`. The actual source is always visible via the
+  `observation_source` (`wunderground_api` / `wu_citypage`) and `fallback_source_station` attribute/sensor - it
+  is never silently merged with your own station's identity.
+- It scrapes an undocumented, unofficial page; if WU redesigns it this source can stop working (the integration
+  degrades gracefully when that happens, it does not crash).
+- **Filled in from real data:** coordinates (from the city's geocoding), wind bearing in degrees
+  (compass-sector centre, a disclosed +-11.25 deg estimate), heat index (standard formula). Wind
+  gust, precipitation rate, solar radiation and UV are filled in too - see "Solar supplement"
+  below, which works regardless of which source this is, not just here.
 
-**Fontos korlátok, amiket érdemes tudni:**
-- Ez a WU saját választása szerinti **legközelebbi** állomás az adott városhoz – **nem feltétlenül** a
-  beállított saját állomásod. Kaposvárnál ez jelenleg például `IKAPOS10`, nem `IKAPOS27`. A ténylegesen
-  használt forrás mindig látszik az `observation_source` (`wunderground_api` / `wu_citypage`) és a
-  `fallback_source_station` attribútumban/szenzorban – soha nem keveredik össze a sajáttal.
-- Nem hivatalos, nem dokumentált oldalszerkezetre épül; ha a WU átalakítja az oldalt, ez a forrás
-  átmenetileg leállhat (az integráció ekkor a szokásos hibakezeléssel jelez, nem omlik össze).
-- **Amit pótolunk valódi adatból:** koordináták (a város geokódolásából), szélirány fokban
-  (iránytű-szektor középértéke, ±11,25° becslés), hőérzet index (szabványos képlet). A
-  széllökés, csapadék-intenzitás, napsugárzás és UV-index pótlását lásd lent (M3b) – ezek
-  mostantól a forráskiválasztástól függetlenül is pótolhatók, nem csak itt.
+### Air quality, pollen and UV (optional, `M3`)
 
-### Levegőminőség, pollen és UV (opcionális, `M3`)
+Requested in issue `#1`: air pollution, pollen and UV risk from a free, key-less source
+(Open-Meteo Air Quality API, CAMS Europe/Global models, CC BY 4.0).
 
-A `#1` hibajegyben kért funkció: légszennyezettség, pollen és UV-kockázat egy ingyenes,
-kulcs nélküli forrásból (Open-Meteo Air Quality API, CAMS Europe/Global modellek, CC BY 4.0).
+**Off by default** (one extra API call per refresh) - turn it on in the entry's **Configure**
+options (*"Air quality & pollen sensors"*). Once enabled, 14 new sensors appear in the entity
+list, but - like the forecast-accuracy sensors - each one must also be **enabled individually**
+(niche, diagnostic-grade data, off by default so it doesn't needlessly load the refresh cycle
+or clutter the entity list).
 
-**Alapértelmezetten kikapcsolva** (plusz API-hívás frissítésenként) – bekapcsolás a bejegyzés
-**Configure** menüjében (*„Levegőminőség- és pollenszenzorok"*). Bekapcsolás után a 14 új
-szenzor megjelenik az entitáslistában, de – az előrejelzés-pontosság szenzorokhoz hasonlóan –
-**egyenként is engedélyezni kell** őket (niche, diagnosztikai jellegű adatok, alapból kikapcsolva,
-hogy ne terheljék feleslegesen a frissítést és az entitáslistát).
+- **Air Quality Index:** European (EEA) and US (EPA) AQI, each with its own official band
+  (`level` attribute).
+- **Pollutants:** PM2.5, PM10, nitrogen dioxide, sulphur dioxide, ozone, carbon monoxide (µg/m³).
+- **Pollen (6 species):** alder, birch, grass, mugwort, olive, **ragweed** - Hungary's dominant
+  late-summer allergen and the main motivation for this feature. Load-class thresholds
+  (low/moderate/high/very high) come from MeteoSwiss's official, species-specific table.
+  **Olive deliberately has no category** (raw value only): no single, confidently citable
+  European scale was found for it - a missing category is better than a fabricated one.
 
-- **Légszennyezettség-index:** európai (EEA) és amerikai (US EPA) AQI, saját hivatalos
-  sávbeosztással (`level` attribútum).
-- **Szennyezőanyagok:** PM2.5, PM10, nitrogén-dioxid, kén-dioxid, ózon, szén-monoxid (µg/m³).
-- **Pollen (6 faj):** éger, nyír, fűfélék, üröm, olajfa, **parlagfű** – ez utóbbi Magyarország
-  legjelentősebb késő-nyári allergénje, a funkció fő motivációja. A terhelési kategóriákhoz
-  (alacsony/közepes/magas/nagyon magas) a svájci meteorológiai szolgálat (MeteoSwiss)
-  fajspecifikus, hivatalos küszöbértékeit használjuk. **Az olajfa pollenre tudatosan nincs
-  kategória** (csak nyers érték): nem találtunk rá egyetlen, megbízhatóan hivatkozható európai
-  skálát sem – egy hiányzó kategória jobb, mint egy kitalált.
+### Solar supplement and filling in missing data (`M3b`, always on)
 
-### Napsugárzás-kiegészítő és hiányzó adatok pótlása (`M3b`, mindig aktív)
+A new, **always-on** (cannot be turned off), key-less Open-Meteo request - independent of
+whichever `forecast_source` is configured - fills in missing measurement fields and adds one
+new sensor:
 
-Egy új, **mindig aktív** (nem kapcsolható ki), kulcs nélküli Open-Meteo lekérés – független attól,
-melyik `forecast_source` van beállítva – pótolja a hiányzó mérési mezőket, és egy új szenzort ad:
+- **`sunshine_duration` (today):** today's total (so-far/forecast) sunshine duration, in minutes.
+- **Fills in a field only when your own measurement is genuinely missing it** (never overrides
+  a real value): **wind gust**, **precipitation rate**, **solar radiation**, **UV index**. Each
+  affected sensor exposes an `estimated` attribute whenever its value came from here.
+- This **removes the earlier UV limitation**: the UV fill used to only work when Open-Meteo was
+  the actual forecast source (MET Norway has no UV data) - this request always runs regardless.
+- Uses the same Open-Meteo source as the forecast (no new attribution needed).
 
-- **`sunshine_duration` (Napfénytartam, ma):** a mai nap eddigi/becsült teljes napfénytartama
-  percben.
-- **Pótlás, csak ha a saját mérés valóban hiányzik** (sosem írja felül a valódi értéket):
-  **széllökés**, **csapadék-intenzitás**, **napsugárzás**, **UV-index**. Mindegyik szenzoron
-  az `estimated` attribútum jelzi, ha az érték ebből a forrásból lett pótolva.
-- Ez **megszünteti a korábbi UV-korlátot**: az UV-pótlás eddig csak akkor működött, ha az
-  Open-Meteo volt a tényleges előrejelzés-forrás (a MET Norway-nek nincs UV-adata) – ez a
-  lekérés attól függetlenül mindig fut.
-- Ugyanazt az Open-Meteo forrást használja, mint az előrejelzés (nincs új forrásmegjelölés).
+## Data sources
 
-## Adatforrások
-
-| Adat | Forrás | Kulcs |
+| Data | Source | Key |
 |---|---|---|
-| Aktuális mérés (PWS) | Weather Underground `v2/pws/observations/current` | igen |
-| Aktuális mérés (tartalék, legközelebbi állomás) | WU nyilvános városi oldal (`weather/hu/…`), nem hivatalos | nem |
-| Előrejelzés | WU `v3/wx/forecast/daily/5day` (tartalék: `7day`) | igen |
-| Előrejelzés | MET Norway Locationforecast 2.0 (CC BY 4.0) | nem |
-| Előrejelzés, geokódolás | Open-Meteo (CC BY 4.0) | nem |
-| Levegőminőség, pollen (opcionális) | Open-Meteo Air Quality API, CAMS (CC BY 4.0) | nem |
+| Current measurements | Weather Underground `v2/pws/observations/current` | yes |
+| Current measurements (fallback, nearest station) | WU public location page (`weather/{country}/…`), unofficial | no |
+| Forecast | WU `v3/wx/forecast/daily/5day` (fallback: `7day`) | yes |
+| Forecast | MET Norway Locationforecast 2.0 (CC BY 4.0) | no |
+| Forecast, geocoding | Open-Meteo (CC BY 4.0) | no |
+| Air quality, pollen (optional) | Open-Meteo Air Quality API, CAMS (CC BY 4.0) | no |
 
-Az **óránkénti** adat Open-Meteóból, vagy MET Norway-ből jön (a WU PWS API-nak nincs óránkénti előrejelzése). Az `auto` mód az első sikeres forrást használja; melyiket, azt a `forecast_source_used` attribútum mutatja.
-A kötelező forrásmegjelölések: [CREDITS](CREDITS.md).
+Required attributions: see [CREDITS](CREDITS.md). Hourly data comes from Open-Meteo or MET Norway (the WU PWS API has no hourly forecast). The `forecast_source_used` attribute shows which source answered.
 
-## Entitások
+## Location and regional settings
+Enter your own station ID; no station or city is preselected. Leave the city empty
+to use the station's coordinates for forecasts. MET Norway is a forecast provider,
+not a fixed location setting.
 
-| Entitás (kulcs) | Egység | Megjegyzés |
-|---|---|---|
-| `temperature`, `dew_point`, `heat_index`, `wind_chill` | °C | |
-| `feels_like` | °C | hidegben szélhűtés, melegben hőindex, egyébként a hőmérséklet |
-| `wet_bulb` | °C | alapból kikapcsolt |
-| `humidity` / `absolute_humidity` | % / g/m³ | |
-| `pressure` | hPa | |
-| `wind_speed`, `wind_gust` | km/h | |
-| `wind_bearing` | ° | |
-| `wind_compass` | enum | N…NNW / É…ÉÉNy – a nyelvnek megfelelően |
-| `wind_compass_hu` | szöveg | régi, magyar égtáj (kompatibilitás) |
-| `precipitation_rate` / `precipitation_today` | mm/h / mm | |
-| `solar_radiation` / `uv_index` / `cloud_base` | W/m² / – / m | |
-| `temperature_max_today`, `temperature_min_today`, `wind_gust_max_today` | °C, km/h | mai szélsőértékek (éjfélig) |
-| `pressure_change_3h` / `pressure_tendency` | hPa / enum | 3 órás légnyomás-változás és tendencia |
-| `observation_age` | perc | diagnosztika |
-| `wu_api_calls_today`, `forecast_updated`, `forecast_source` | – | diagnosztika |
-| `forecast_mae_*` | °C | előrejelzés-hiba forrásonként (blend módban; alapból kikapcsolt) |
-| `uv_level` | enum | WHO UV-kategória (alacsony…extrém) |
-| `sunshine_duration` | perc | napfénytartam, ma (M3b, mindig aktív) |
-| `european_aqi`, `us_aqi` | – | AQI, `level` attribútummal (opcionális, alapból kikapcsolt) |
-| `pm2_5`, `pm10`, `nitrogen_dioxide`, `sulphur_dioxide`, `ozone`, `carbon_monoxide` | µg/m³ | opcionális, alapból kikapcsolt |
-| `pollen_alder`, `pollen_birch`, `pollen_grass`, `pollen_mugwort`, `pollen_olive`, `pollen_ragweed` | grains/m³ | opcionális, alapból kikapcsolt; `level` attribútum (az olajfa kivételével) |
-| `station_online` | be/ki | diagnosztika: friss-e az utolsó mérés |
-| `uv_protection_needed` | be/ki | UV-index ≥ 3 (WHO ajánlás) |
-| `weather` | – | aktuális állapot + napi előrejelzés |
+Set **City country code** to `NL` for the Netherlands (or your location's two-letter
+country code). New entries suggest Home Assistant's country. The code filters
+city geocoding and selects the public fallback URL (`weather/nl/...`, for example).
+An empty code disables the public-page fallback. Existing entries retain `HU`
+for compatibility until you change it in the integration options.
 
-## Kaposvár és Magyarország
-Az integráció alapértelmezései **Kaposvárra** vannak hangolva (fejlesztési/teszt referenciaként): a beállítás az `IKAPOS27` állomást és a
-`Kaposvár` előrejelzési várost javasolja (a mezők átírhatók). A város geokódolása egyszer fut le és tartósan tárolódik;
-valós adatokkal ellenőrizve Kaposvár a (46.3667, 17.8) koordinátára oldódik fel, és az Open-Meteo (automatikus, ECMWF IFS,
-ICON-EU) valamint a MET Norway előrejelzés is hibátlanul feldolgozható rá. Más magyar városnál ugyanígy működik
-(pl. `Budapest`, `Pécs`); hazai hivatalos adat (HungaroMet) a tervezett v1.8-ban jön.
+The unofficial public-page parser has only been verified against a Hungarian
+metric page fixture. Selecting another country fixes routing, but does not
+guarantee that its page layout and units match. Prefer your own WU API key.
+Some locations, including US locations, need a more specific WU URL path.
 
-## Időjárás kártya
+## Weather card
 
 ```yaml
 type: weather-forecast
 entity: weather.wunderground_pws_ikapos27_weather
-forecast_type: hourly   # vagy: daily
+forecast_type: hourly   # or: daily
 ```
-(Régebbi telepítéseknél az entitás azonosítója változatlan marad, pl. `weather.wunderground_pws_ikapos27`.)
 
-## Frissítés régebbi verzióról
-A bejegyzés automatikusan migrálódik (konfig-verzió 3); az entitások azonosítói nem változnak. Ha az opciókban
-korábban módosítottad az állomásazonosítót, az a bejegyzés adatává válik, így az entitások megmaradnak.
+## Upgrading
+Existing entries migrate automatically (config version 3); entity ids do not change.
 
-## Fejlesztés
-Lásd: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (tesztek, új szolgáltató hozzáadása).
-Hibát vagy ötletet a [GitHub Issues](https://github.com/aiasz/ha-wunderground-pws/issues)-ben jelezz.
-
-## Licenc
-MIT – Készítő: Aiasz ([LICENSE](LICENSE))
+## Development & licence
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Report bugs and ideas on [GitHub Issues](https://github.com/dielessen/wunderground-ha/issues).
+MIT – Author: Aiasz ([LICENSE](LICENSE)).

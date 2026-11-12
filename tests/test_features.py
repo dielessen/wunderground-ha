@@ -171,12 +171,19 @@ async def test_diagnostics_are_redacted(hass, aioclient_mock, freezer) -> None:
     mock_apis(aioclient_mock)
     entry = make_entry(data={"city": "Kaposvár"})
     await _setup(hass, entry)
+    # Error text can contain request URLs, keys and location details.
+    entry.runtime_data.last_exception = RuntimeError(
+        f"https://example.test/?apiKey={API_KEY}&city=Kaposvár"
+    )
     result = await async_get_config_entry_diagnostics(hass, entry)
 
     text = json.dumps(result, default=str)
     assert API_KEY not in text
     assert "Kaposvár" not in text
     assert "46.36" not in text  # station coordinates
+    assert STATION not in text
+    assert "https://example.test" not in text
+    assert result["observation"]["last_exception"] == "RuntimeError"
     assert result["entry"]["data"]["api_key"] == "**REDACTED**"
     assert result["forecast"]["source_used"] == "wunderground"
     assert result["forecast"]["breakers"]["wunderground"] == {"failures": 0, "open": False}
@@ -276,7 +283,7 @@ async def test_kaposvar_forecast_uses_the_geocoded_town_not_a_default(
     assert entry.runtime_data.forecast.daily  # a forecast exists for the town
 
 
-async def test_setup_form_suggests_kaposvar(hass) -> None:
+async def test_setup_form_does_not_preselect_a_station_or_city(hass) -> None:
     from homeassistant import config_entries
 
     result = await hass.config_entries.flow.async_init(
@@ -287,8 +294,8 @@ async def test_setup_form_suggests_kaposvar(hass) -> None:
         for key in result["data_schema"].schema
         if key.description and "suggested_value" in key.description
     }
-    assert suggested["city"] == "Kaposvár"
-    assert suggested["station_id"] == "IKAPOS27"
+    assert suggested["city"] == ""
+    assert suggested["station_id"] == ""
 
 
 async def test_forecast_today_is_not_narrower_than_the_measured_range(

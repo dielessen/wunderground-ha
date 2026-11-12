@@ -46,7 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.WEATHER, Platform.BINARY_SENSOR]
 
-_REPO_URL = "github.com/aiasz/ha-wunderground-pws"
+_REPO_URL = "github.com/dielessen/wunderground-ha"
 
 
 SERVICE_REFRESH = "refresh"

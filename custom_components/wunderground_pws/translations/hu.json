@@ -9,7 +9,8 @@
           "api_key": "API kulcs (üres = automatikus keresés)",
           "scan_interval": "Frissítési időköz (perc)",
           "city": "Előrejelzési / tartalék-forrás város (pl. Kaposvár) — opcionális",
-          "forecast_source": "Előrejelzés forrása"
+          "forecast_source": "Előrejelzés forrása",
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
         }
       },
       "discover": {
@@ -51,7 +52,8 @@
           "city": "Előrejelzési / tartalék-forrás város (pl. Kaposvár) — opcionális",
           "forecast_source": "Előrejelzés forrása",
           "openmeteo_model": "Open-Meteo időjárási modell",
-          "enable_air_quality": "Levegőminőség- és pollenszenzorok (plusz API-hívás frissítésenként)"
+          "enable_air_quality": "Levegőminőség- és pollenszenzorok (plusz API-hívás frissítésenként)",
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
         }
       }
     },

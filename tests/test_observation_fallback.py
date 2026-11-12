@@ -79,6 +79,33 @@ async def test_no_city_means_no_fallback_attempt_is_even_made(
     assert calls_to(aioclient_mock, "wunderground.com/weather/") == []  # fallback never attempted
 
 
+async def test_fallback_routes_to_selected_country(hass, aioclient_mock, freezer) -> None:
+    freezer.move_to(NOW)
+    mock_apis(aioclient_mock)
+    aioclient_mock.get(WU_DASHBOARD_URL.format(station_id=STATION), status=404)
+    # Reuse the metric fixture to test routing, not Dutch live-page compatibility.
+    aioclient_mock.get(wu_citypage.page_url("Amsterdam", "NL"), text=CITYPAGE_HTML)
+    entry = make_entry(
+        data={"api_key": "", "api_key_source": "legacy", "city": "Amsterdam", "country_code": "NL"}
+    )
+    await _setup(hass, entry)
+    assert entry.state is ConfigEntryState.LOADED
+    assert calls_to(aioclient_mock, "/weather/nl/Amsterdam")
+    assert not calls_to(aioclient_mock, "/weather/hu/")
+
+
+async def test_blank_country_disables_city_fallback(hass, aioclient_mock, freezer) -> None:
+    freezer.move_to(NOW)
+    mock_apis(aioclient_mock)
+    aioclient_mock.get(WU_DASHBOARD_URL.format(station_id=STATION), status=404)
+    entry = make_entry(
+        data={"api_key": "", "api_key_source": "legacy", "city": "Amsterdam", "country_code": ""}
+    )
+    await _setup(hass, entry)
+    assert entry.state is not ConfigEntryState.LOADED
+    assert not calls_to(aioclient_mock, "wunderground.com/weather/")
+
+
 async def test_citypage_also_failing_preserves_the_original_error(
     hass, aioclient_mock, freezer
 ) -> None:

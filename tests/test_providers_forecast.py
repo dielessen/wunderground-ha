@@ -30,6 +30,15 @@ TZ = ZoneInfo("Europe/Budapest")
 URL = "https://example.test/api"
 
 
+async def test_geocoding_filters_by_country(hass, aioclient_mock) -> None:
+    aioclient_mock.get(
+        OPEN_METEO_GEOCODING_URL, json={"results": [{"latitude": 52.37, "longitude": 4.90}]}
+    )
+    coords = await open_meteo.geocode(async_get_clientsession(hass), "Amsterdam", "en", "nl")
+    assert coords == (52.37, 4.90)
+    assert aioclient_mock.mock_calls[-1][1].query["countryCode"] == "NL"
+
+
 # --- shared HTTP helper ------------------------------------------------------------
 
 

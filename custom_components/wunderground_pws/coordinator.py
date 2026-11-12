@@ -91,6 +91,7 @@ from .const import (
     CONF_API_KEY,
     CONF_API_KEY_SOURCE,
     CONF_CITY,
+    CONF_COUNTRY,
     CONF_SCAN_INTERVAL,
     CONF_STATION_ID,
     DEFAULT_CITY,
@@ -98,6 +99,7 @@ from .const import (
     DEFAULT_STATION_ID,
     DOMAIN,
     KEY_REDISCOVERY_COOLDOWN,
+    LEGACY_COUNTRY,
     MAX_REDISCOVERY_ATTEMPTS,
     OBS_MIN_STALE_MINUTES,
     OBS_STALE_FACTOR,
@@ -141,6 +143,7 @@ class WundergroundPWSCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api_key_source: str = get_setting(entry, CONF_API_KEY_SOURCE, API_KEY_SOURCE_LEGACY)
         # Also used by the no-key observation fallback (F09), not just the forecast.
         self.city: str = get_setting(entry, CONF_CITY, DEFAULT_CITY)
+        self.country: str = get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
         self.scan_interval: int = get_setting(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         self.settings_signature = settings_signature(entry)
 
@@ -331,10 +334,10 @@ class WundergroundPWSCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         fallback itself fails, so normal UpdateFailed/reauth behaviour is
         preserved whenever there genuinely is no way to get an observation.
         """
-        if not self.city:
+        if not self.city or not self.country:
             raise original
         try:
-            obs = await wu_citypage.fetch_observation(session, self.city)
+            obs = await wu_citypage.fetch_observation(session, self.city, self.country)
         except ProviderError as exc:
             _LOGGER.warning(
                 "WU API unavailable and the public-page fallback for '%s' also failed: %s",
@@ -361,7 +364,7 @@ class WundergroundPWSCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # every later refresh reuses the forecast coordinator's own coords.
                 try:
                     coords = await open_meteo.geocode(
-                        session, self.city, self.hass.config.language.split("-")[0]
+                        session, self.city, self.hass.config.language.split("-")[0], self.country
                     )
                 except ProviderError:
                     coords = None

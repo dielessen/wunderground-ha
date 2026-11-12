@@ -33,6 +33,7 @@ from .const import (
     BREAKER_COOLDOWN,
     BREAKER_THRESHOLD,
     CONF_CITY,
+    CONF_COUNTRY,
     CONF_FORECAST_SOURCE,
     CONF_OPENMETEO_MODEL,
     DEFAULT_CITY,
@@ -48,6 +49,7 @@ from .const import (
     FORECAST_SOURCE_WUNDERGROUND,
     FORECAST_TTL,
     HOURLY_SOURCES,
+    LEGACY_COUNTRY,
 )
 from .models import (
     DailyForecastPoint,
@@ -101,6 +103,7 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
         self.observation = observation
         self.state_store = state
         self.city: str = get_setting(entry, CONF_CITY, DEFAULT_CITY)
+        self.country: str = get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
         self.source: str = get_setting(entry, CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE)
         self.model: str = get_setting(entry, CONF_OPENMETEO_MODEL, DEFAULT_OPENMETEO_MODEL)
 
@@ -272,13 +275,13 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
         if self.city:
             if self._geo_cache is None:
                 self._geo_cache = await self._geo_store.async_load() or {}
-            key = self.city.strip().lower()
+            key = f"{self.country.upper()}:{self.city.strip().lower()}"
             if key in self._geo_cache:
                 lat, lon = self._geo_cache[key]
                 return lat, lon
             try:
                 lat, lon = await open_meteo.geocode(
-                    session, self.city, self.hass.config.language.split("-")[0]
+                    session, self.city, self.hass.config.language.split("-")[0], self.country
                 )
             except ProviderError as exc:
                 _LOGGER.warning("Geocoding '%s' failed (%s) - using the station", self.city, exc)

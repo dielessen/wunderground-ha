@@ -68,7 +68,7 @@ _BROWSER_HEADERS = {
         "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     ),
     "Accept": "text/html,application/xhtml+xml",
-    "Accept-Language": "hu-HU,hu;q=0.9,en;q=0.5",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
 # Each pattern captures the first plain-text numeric/string value after a stable,
@@ -105,7 +105,9 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
 
 def page_url(city: str, country: str = "hu") -> str:
     """Build the public location-page URL for a human-readable city name."""
-    return _BASE_URL.format(country=country, slug=quote(city))
+    if not re.fullmatch(r"[a-zA-Z]{2}", country):
+        raise ProviderError("wu_citypage: a two-letter country code is required")
+    return _BASE_URL.format(country=country.lower(), slug=quote(city.strip(), safe=""))
 
 
 def _num(pattern: re.Pattern[str], html: str) -> float | None:

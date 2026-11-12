@@ -13,6 +13,7 @@ from custom_components.wunderground_pws.const import (
     CONF_API_KEY,
     CONF_API_KEY_SOURCE,
     CONF_CITY,
+    CONF_COUNTRY,
     CONF_ENABLE_AIR_QUALITY,
     CONF_FORECAST_SOURCE,
     CONF_SCAN_INTERVAL,
@@ -67,6 +68,20 @@ async def test_user_flow_with_valid_key(hass, aioclient_mock) -> None:
     assert result["data"][CONF_API_KEY] == API_KEY
     assert result["data"][CONF_API_KEY_SOURCE] == API_KEY_SOURCE_MANUAL
     assert result["version"] == 3
+
+
+async def test_setup_suggests_home_country_without_foreign_station(hass, aioclient_mock) -> None:
+    hass.config.country = "NL"
+    mock_apis(aioclient_mock)
+    result = await _start(hass)
+    fields = {key.schema: key for key in result["data_schema"].schema}
+    assert fields[CONF_COUNTRY].default() == "NL"
+    assert fields[CONF_STATION_ID].description["suggested_value"] == ""
+    assert fields[CONF_CITY].description["suggested_value"] == ""
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_COUNTRY: " nl "}
+    )
+    assert result["data"][CONF_COUNTRY] == "NL"
 
 
 @pytest.mark.parametrize(
@@ -167,6 +182,7 @@ async def test_options_save_always_stores_the_key(hass, aioclient_mock) -> None:
             CONF_API_KEY: API_KEY,
             CONF_SCAN_INTERVAL: 10,
             CONF_CITY: "Kaposvár",
+            CONF_COUNTRY: "NL",
             CONF_FORECAST_SOURCE: "metno",
         },
     )
@@ -177,6 +193,8 @@ async def test_options_save_always_stores_the_key(hass, aioclient_mock) -> None:
     assert entry.state is ConfigEntryState.LOADED  # reloaded with the new settings
     assert entry.runtime_data.scan_interval == 10
     assert entry.runtime_data.forecast.source == "metno"
+    assert entry.runtime_data.country == "NL"
+    assert entry.runtime_data.forecast.country == "NL"
 
 
 async def test_options_can_enable_air_quality(hass, aioclient_mock) -> None:

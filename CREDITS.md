@@ -1,32 +1,39 @@
-# Köszönet és forrásmegjelölés / Credits
+# Credits and attribution
 
-Szerző / Author: **Aiasz** – licenc / licence: MIT (`LICENSE`).
+Original author: **Aiasz**. This independent repository is maintained by **dielessen**
+and based on [aiasz/ha-wunderground-pws](https://github.com/aiasz/ha-wunderground-pws).
+The original MIT copyright and license are preserved in [LICENSE](LICENSE).
 
-## Ötletgazdák és hasonló projektek
+## Original feature ideas
 
-A projekt **kódot nem vesz át** más projektekből; az alábbiak *ötletforrások*. Ahol egy
-megoldás más ötletén alapul, a forráskódban `Ötlet:` / `Idea:` megjegyzés jelzi.
+Upstream credited the following as inspiration, without copying their code.
+This repository does contain the upstream integration code.
 
-| Funkció | Ötletgazda / projekt | Licenc | Mi származik tőle |
-|---|---|---|---|
-| Angol nyelvű változat, óránkénti előrejelzés, csapadék/pollen/levegőminőség | **ztarsoly (Zoli)** – [#1 issue](https://github.com/aiasz/ha-wunderground-pws/issues/1) | – | a három kért funkció |
-| Kulcs nélküli megfigyelés-fallback (F09, v1.6.1) – a nyilvános WU városi oldal ötlete és élő ellenőrzése | **Aiasz** (a felhasználó saját tesztje a `wunderground.com/weather/hu/…` oldalon) | – | a fallback-forrás azonosítása és a kulcsot/hitelesítést nem igénylő megoldás iránya |
-| HU+EN felület, tartós előrejelzés-tár, figyelmeztetés-szenzorok (terv) | [ztarsoly/ha-idokep-weather-and-forecast](https://github.com/ztarsoly/ha-idokep-weather-and-forecast) | MIT | csak funkcióötlet (az Időkép-adatot nem használjuk) |
-| HungaroMet közeli állomások, radar (terv) | [FabianGabor/HA-HungaroMet](https://github.com/FabianGabor/HA-HungaroMet), [ztarsoly/ha-hungaromet-weather-and-forecast](https://github.com/ztarsoly/ha-hungaromet-weather-and-forecast) | nincs megadva / MIT | csak ötlet |
-| Figyelmeztetések (terv) | [amaximus/met_alerts_hu](https://github.com/amaximus/met_alerts_hu) | MIT | csak ötlet |
-| WU PWS: előrejelzési termék (`5day`), `daypart` szerkezet, újrahitelesítés, nyelv | [cytech/Home-Assistant-wundergroundpws](https://github.com/cytech/Home-Assistant-wundergroundpws) | nem megállapítható | megfigyelések a dokumentációjából; kódot nem vettünk át |
+| Feature | Source | Upstream attribution |
+|---|---|---|
+| English interface, hourly forecasts, air quality and pollen | ztarsoly (Zoli), [issue #1](https://github.com/aiasz/ha-wunderground-pws/issues/1) | Feature requests |
+| Public city-page fallback | Aiasz | Source identification and Hungarian-page verification |
+| Bilingual interface, persistent forecasts, planned alerts | [ztarsoly/ha-idokep-weather-and-forecast](https://github.com/ztarsoly/ha-idokep-weather-and-forecast) | MIT; ideas only, no Idokep data |
+| Planned HungaroMet stations and radar | [FabianGabor/HA-HungaroMet](https://github.com/FabianGabor/HA-HungaroMet), [ztarsoly/ha-hungaromet-weather-and-forecast](https://github.com/ztarsoly/ha-hungaromet-weather-and-forecast) | License unspecified / MIT, as recorded upstream |
+| Planned alerts | [amaximus/met_alerts_hu](https://github.com/amaximus/met_alerts_hu) | MIT; ideas only |
+| WU five-day product, daypart structure, reauthentication and language | [cytech/Home-Assistant-wundergroundpws](https://github.com/cytech/Home-Assistant-wundergroundpws) | Documentation observations; no copied code; license not established upstream |
 
-## Adatforrások és kötelező jelölések
+## Data providers
 
-| Forrás | Jelölés / feltétel |
-|---|---|
-| Weather Underground / The Weather Company | a megfigyelések és az előrejelzés forrása; saját PWS-tulajdonosi API kulcs ajánlott |
-| MET Norway | Locationforecast 2.0, **CC BY 4.0**; kötelező azonosító `User-Agent`, `Expires`/`If-Modified-Since` betartása – az integráció így működik |
-| Open-Meteo | **CC BY 4.0**, <https://open-meteo.com/>; ingyenes, nem kereskedelmi használat (600/perc, 5 000/óra, 10 000/nap) |
-| HungaroMet (tervezett) | *„Database: Meteorological Database, HungaroMet Nonprofit Zrt.”*; módosítatlan adat, a figyelmeztetések csak módosítás nélkül |
+- Weather Underground / The Weather Company: observations and forecasts; a personal
+  PWS-owner API key is recommended.
+- MET Norway Locationforecast 2.0: CC BY 4.0. The integration sends an identifying
+  User-Agent and supports cache expiry and conditional requests.
+- Open-Meteo: CC BY 4.0; the free API is intended for non-commercial use.
+  Check current service limits before deployment. Geocoding uses GeoNames data.
+- HungaroMet was an upstream roadmap idea, not an implemented provider. Upstream
+  recorded the attribution "Database: Meteorological Database, HungaroMet Nonprofit Zrt."
+  and the requirement to preserve data and warnings unchanged.
 
-## Képletek
+## Formula references
 
-- Szélhűtés: Environment Canada / NWS (2001) · Nedves hőmérséklet: Stull (2011), *J. Appl. Meteor. Climatol.* ·
-  Felhőalap: Espy-közelítés (125 m/°C) · Derült égbolti sugárzás: Kasten & Czeplak (1980) ·
-  Nap magassága: NOAA General Solar Position Calculations.
+- Wind chill: Environment Canada / NWS (2001).
+- Wet-bulb temperature: Stull (2011), Journal of Applied Meteorology and Climatology.
+- Cloud base: Espy approximation (125 m/degree C).
+- Clear-sky radiation: Kasten & Czeplak (1980).
+- Solar elevation: NOAA General Solar Position Calculations.

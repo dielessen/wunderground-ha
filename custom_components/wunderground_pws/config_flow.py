@@ -44,6 +44,7 @@ from .const import (
     CONF_API_KEY,
     CONF_API_KEY_SOURCE,
     CONF_CITY,
+    CONF_COUNTRY,
     CONF_ENABLE_AIR_QUALITY,
     CONF_FORECAST_SOURCE,
     CONF_OPENMETEO_MODEL,
@@ -58,6 +59,7 @@ from .const import (
     DEFAULT_STATION_ID,
     DOMAIN,
     FORECAST_SOURCES,
+    LEGACY_COUNTRY,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     OPENMETEO_MODELS,
@@ -131,6 +133,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
         self._station_id: str = DEFAULT_STATION_ID
         self._scan_interval: int = DEFAULT_SCAN_INTERVAL
         self._city: str = DEFAULT_CITY
+        self._country: str = ""
         self._forecast_source: str = DEFAULT_FORECAST_SOURCE
         self._enable_air_quality: bool = DEFAULT_ENABLE_AIR_QUALITY
         self._discovered_key: str | None = None
@@ -145,6 +148,9 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
             self._station_id = user_input[CONF_STATION_ID].strip().upper()
             self._scan_interval = user_input[CONF_SCAN_INTERVAL]
             self._city = (user_input.get(CONF_CITY) or "").strip()
+            self._country = (
+                user_input.get(CONF_COUNTRY, self.hass.config.country or "").strip().upper()
+            )
             self._forecast_source = user_input.get(CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE)
             api_key = (user_input.get(CONF_API_KEY) or "").strip()
 
@@ -170,11 +176,16 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_STATION_ID, description={"suggested_value": DEFAULT_STATION_ID}
                 ): str,
                 vol.Optional(CONF_API_KEY, default=""): _KEY_SELECTOR,
+                vol.Optional(CONF_COUNTRY, default=self.hass.config.country or ""): vol.All(
+                    str, str.strip, str.upper, vol.Match(r"^(?:[A-Z]{2})?$")
+                ),
                 vol.Required(
                     CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
                 ): _scan_interval_validator(),
                 vol.Optional(
-                    CONF_CITY, description={"suggested_value": SUGGESTED_CITY}, default=DEFAULT_CITY
+                    CONF_CITY,
+                    description={"suggested_value": SUGGESTED_CITY},
+                    default=DEFAULT_CITY,
                 ): str,
                 vol.Optional(
                     CONF_FORECAST_SOURCE, default=DEFAULT_FORECAST_SOURCE
@@ -209,7 +220,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
             self._discovered_key = await wu.discover_api_key(self._station_id, session)
         else:
             api_key = (user_input.get(CONF_API_KEY) or "").strip()
-            if not api_key and not self._city:
+            if not api_key and not (self._city and self._country):
                 errors[CONF_API_KEY] = "api_key_required"
             elif not api_key:
                 # No key at all, but the city fallback can carry the station
@@ -224,7 +235,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 if error is None:
                     return self._create_entry(api_key, source)
-                if self._city and source == API_KEY_SOURCE_AUTO:
+                if self._city and self._country and source == API_KEY_SOURCE_AUTO:
                     # An unvalidated *auto-discovered* key is safe to store: the
                     # coordinator revalidates every key before using it (S12a) and
                     # will fall back to the city source if it keeps failing (F09).
@@ -260,6 +271,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_API_KEY_SOURCE: source,
                 CONF_SCAN_INTERVAL: self._scan_interval,
                 CONF_CITY: self._city,
+                CONF_COUNTRY: self._country,
                 CONF_FORECAST_SOURCE: self._forecast_source,
             },
         )
@@ -336,6 +348,11 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
         if user_input is not None:
             key_in = (user_input.get(CONF_API_KEY) or "").strip()
             new_city = (user_input.get(CONF_CITY) or "").strip()
+            new_country = (
+                user_input.get(CONF_COUNTRY, get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY))
+                .strip()
+                .upper()
+            )
             final_key, final_source = current_key, current_source
 
             if key_in != current_key or not key_in:
@@ -346,14 +363,16 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                     session = async_get_clientsession(self.hass)
                     final_key = await wu.discover_api_key(station_id, session) or ""
                     final_source = API_KEY_SOURCE_AUTO
-                    if not final_key and not new_city:
+                    if not final_key and not (new_city and new_country):
                         errors[CONF_API_KEY] = "discovery_failed"
                 if not errors and final_key:
                     error = await async_validate_credentials(self.hass, station_id, final_key)
                     # A failed *auto* key is still saved when a city fallback exists
                     # (F09/S12 retry at runtime); a failed *manual* key is always
                     # reported back (S12c - never silently accept it unverified).
-                    if error and not (new_city and final_source == API_KEY_SOURCE_AUTO):
+                    if error and not (
+                        new_city and new_country and final_source == API_KEY_SOURCE_AUTO
+                    ):
                         errors["base"] = error
 
             if not errors:
@@ -366,6 +385,11 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                         CONF_API_KEY_SOURCE: final_source,
                         CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
                         CONF_CITY: (user_input.get(CONF_CITY) or "").strip(),
+                        CONF_COUNTRY: user_input.get(
+                            CONF_COUNTRY, get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
+                        )
+                        .strip()
+                        .upper(),
                         CONF_FORECAST_SOURCE: user_input[CONF_FORECAST_SOURCE],
                         CONF_OPENMETEO_MODEL: user_input.get(
                             CONF_OPENMETEO_MODEL, DEFAULT_OPENMETEO_MODEL
@@ -384,6 +408,9 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                     default=get_setting(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                 ): _scan_interval_validator(),
                 vol.Optional(CONF_CITY, default=get_setting(entry, CONF_CITY, DEFAULT_CITY)): str,
+                vol.Optional(
+                    CONF_COUNTRY, default=get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
+                ): vol.All(str, str.strip, str.upper, vol.Match(r"^(?:[A-Z]{2})?$")),
                 vol.Optional(
                     CONF_FORECAST_SOURCE,
                     default=get_setting(entry, CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE),
