@@ -3,6 +3,16 @@
 Historical upstream releases below are English summaries. The original detailed
 records remain in Git history. Original author: Aiasz; see CREDITS.md.
 
+## Unreleased
+
+### Documentation
+
+- Update installation and update instructions for the built-in Home Assistant
+  Marketplace (2026.11+), retaining guidance for older HACS installations.
+- Refresh the repository homepage with current version, providers, languages,
+  workflow badges, validation status and default-branch installation behavior.
+- Keep hacs.json and the existing validation action for Marketplace compatibility.
+
 ## 1.8.1 — 2026-11-12
 
 - Add a complete Dutch Home Assistant translation alongside English, preserving

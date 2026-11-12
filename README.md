@@ -1,7 +1,27 @@
 # Wunderground PWS — Home Assistant
 
-Personal Weather Underground station measurements with **one selectable forecast provider**.
-Maintained by dielessen, based on Aiasz’s MIT-licensed integration. See [CREDITS](CREDITS.md).
+[![Tests](https://github.com/dielessen/wunderground-ha/actions/workflows/tests.yml/badge.svg)](https://github.com/dielessen/wunderground-ha/actions/workflows/tests.yml)
+[![Marketplace validation](https://github.com/dielessen/wunderground-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/dielessen/wunderground-ha/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Bring your Weather Underground personal weather station into Home Assistant and
+choose **one of six forecast providers**, including Dutch forecast sources.
+The interface supports **Dutch and English** and follows your Home Assistant language.
+
+**Current integration version: 1.8.1 · Updated: 12 November 2026 · Default branch: main**
+
+- **Your station:** current measurements, derived weather values and station health.
+- **Your forecast:** Open-Meteo, KNMI via Open-Meteo, MET Norway, Weather Underground,
+  Weerlive or Buienradar, with exactly one forecast provider active at a time.
+- **Clear source information:** provider coverage, credentials and available forecast periods.
+- **Home Assistant Marketplace:** install this repository using **Add from link**.
+
+Maintained by [dielessen](https://github.com/dielessen). Based on Aiasz’s original
+MIT-licensed integration; see [CREDITS](CREDITS.md) and [LICENSE](LICENSE).
+
+[Install](#installation) · [Choose a provider](#forecast-providers) ·
+[Configure](#setup-and-changing-provider) · [Upgrade](#upgrading) ·
+[Changelog](CHANGELOG.md) · [Report an issue](https://github.com/dielessen/wunderground-ha/issues)
 
 ## Languages
 
@@ -46,15 +66,41 @@ Weather Underground and Buienradar advertise daily forecast support only in HA.
 
 ## Installation
 
-HACS → Integrations → Custom repositories →
-`https://github.com/dielessen/wunderground-ha` → category **Integration** → install
-and restart Home Assistant.
+### Home Assistant Marketplace — recommended
 
-For manual installation, copy `custom_components/wunderground_pws` into
-`config/custom_components/` and restart.
+For Home Assistant **2026.11 and newer**, use the built-in Marketplace:
 
-The inherited advertised minimum Home Assistant version is 2024.12.0; validation
-currently uses the current HA test dependencies on Python 3.14/Linux.
+1. Open **Settings → Marketplace** using an administrator account.
+2. Select **Add from link** in the upper-right corner.
+3. Enter `https://github.com/dielessen/wunderground-ha`.
+4. Connect GitHub if prompted, then open the repository page and select **Install**.
+5. Restart Home Assistant if requested. After updating an existing installation,
+   restart Home Assistant to load the new integration code.
+6. Open **Settings → Devices & services → Add integration** and choose **Wunderground PWS**.
+
+Adding this repository from a link installs it as a custom repository; it does not
+require the project to be listed in the public catalog. See the official
+[Marketplace installation guide](https://www.home-assistant.io/integrations/marketplace/#custom-repositories).
+
+The repository keeps its required `hacs.json` metadata and the existing validation
+action because these are also used by Marketplace. See
+[how Marketplace works](https://contributors.home-assistant.io/marketplace/how-it-works/).
+
+### Older Home Assistant installations
+
+Before Home Assistant 2026.11, the community installer was called **HACS**. On those
+versions, add this GitHub URL through its **Custom repositories** menu with type
+**Integration**, install the integration and restart Home Assistant.
+
+### Manual installation
+
+Copy `custom_components/wunderground_pws` from this repository into
+`config/custom_components/wunderground_pws` and restart Home Assistant. Then add
+**Wunderground PWS** under **Settings → Devices & services**.
+
+The inherited advertised minimum Home Assistant version is 2024.12.0. The automated
+test suite uses current HA test dependencies on Python 3.14/Linux; that older minimum
+has not been independently retested. Marketplace itself requires Home Assistant 2026.11+.
 
 ## Setup and changing provider
 
@@ -105,6 +151,17 @@ redacted diagnostics and the `wunderground_pws.refresh` service.
 
 ## Upgrading
 
+Check **Settings → Updates** for updates to your installed Marketplace repository.
+Install the available update and restart Home Assistant. Open the integration's
+**Configure** options to review your selected provider and credentials.
+
+This repository currently publishes code on `main` and has no tagged GitHub releases.
+For a repository without releases, Marketplace installs the latest commit from its
+default branch. This behavior is described in the official
+[Marketplace version guide](https://contributors.home-assistant.io/marketplace/how-it-works/#versions).
+The integration's own version is recorded in
+[`manifest.json`](custom_components/wunderground_pws/manifest.json).
+
 Configuration schema 4 preserves station/entity IDs. Older `auto` and `blend`
 forecast modes migrate to **Open-Meteo**, a single provider. Other explicit source
 choices are preserved. Open the options after upgrading to choose your preferred
@@ -120,6 +177,19 @@ forecast_type: daily
 
 Use `hourly` only with an hourly-capable provider. Select the actual weather entity
 from your Home Assistant instance.
+
+## Project status and validation
+
+The current code includes complete Dutch/English interface support and six explicit
+forecast choices. The most recent application change passed **306 automated tests**,
+Ruff lint/format checks, hassfest and Marketplace repository validation. The badges
+at the top show the status of the latest workflow runs.
+
+Provider adapters are tested against recorded API responses. A live KNMI/Open-Meteo
+request was also checked. End-to-end behavior on the maintainer's own Home Assistant
+installation has not yet been verified. See [review notes](docs/REVIEW.md) for known
+limitations, including the unofficial WU city-page fallback and daylight-saving
+handling in the existing Open-Meteo hourly parser.
 
 ## Provider terms and attribution
 
