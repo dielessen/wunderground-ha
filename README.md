@@ -1,166 +1,127 @@
-# Wunderground PWS – Home Assistant integration
+# Wunderground PWS — Home Assistant
 
-**Maintained by dielessen · Based on Aiasz’s Wunderground PWS integration (MIT)**
+Personal Weather Underground station measurements with **one selectable forecast provider**.
+Maintained by dielessen, based on Aiasz’s MIT-licensed integration. See [CREDITS](CREDITS.md).
 
-Shows the data of any [Weather Underground](https://www.wunderground.com/) personal weather station (PWS)
-in Home Assistant through the **official WU API**, in metric units, and adds a **multi-provider forecast**
-(Weather Underground, MET Norway, Open-Meteo) with an automatic fallback chain. Available in English and Hungarian.
+## Forecast providers
 
-> Roadmap and release notes: [CHANGELOG](CHANGELOG.md). Credits and idea sources: [CREDITS](CREDITS.md).
+Select one provider in setup or in the integration options. The integration uses
+that provider for both daily and hourly forecasts when available. It never contacts
+another forecast provider to fill missing hours or to recover from a failure.
 
-## Features
+| Selection | Daily / hourly availability | Coverage | Credentials |
+|---|---|---|---|
+| Open-Meteo | Up to 7 days / 72 hours | Worldwide, depending on selected model | None for the free non-commercial service |
+| KNMI via Open-Meteo | Up to 7 days / 72 hours | HARMONIE regional coverage, ECMWF extension | None for the free non-commercial service |
+| MET Norway | Available local days / up to 72 hourly points | Locationforecast coverage | None |
+| Weather Underground | Usually 5 days; 7-day endpoint attempted if unavailable / no hourly forecast | Subject to WU product access | WU API key |
+| Weerlive | 5 days / 24 hours | Netherlands, location-specific | Personal Weerlive API key |
+| Buienradar | 5 days / no hourly forecast | Netherlands, **national forecast** | None |
 
-- **Your own station's measurements**: temperature, feels-like, dew point, heat index / wind chill, humidity,
-  pressure, wind (speed, gust, bearing, compass), precipitation (daily, rate), solar radiation, UV and derived
-  values (cloud base, absolute humidity, wet-bulb temperature).
-- **Weather entity** with a daily (7 days) **and hourly (72 h)** forecast.
-- **Multi-source forecast with fallback**: Weather Underground → MET Norway → Open-Meteo (or a single chosen source).
-- **Blend (consensus) mode**: all sources together; the integration scores each source against *your own station's measurements* and weights the more accurate one higher.
-- **Open-Meteo model choice**: automatic, ECMWF IFS, DWD ICON-EU.
-- **Today's min/max** temperature and gust, **pressure tendency** (rising / steady / falling).
-- **Diagnostics**: downloadable (redacted) diagnostics and a `wunderground_pws.refresh` service.
-- **English and Hungarian UI** – follows the Home Assistant language (entity names, options, wind direction).
-- **Station health**: `Station online` and `Observation age` diagnostic entities; glitchy readings are filtered out.
-- **Better "current condition"**: `clear-night`, snow/sleet, fog, strong wind, sky state from solar radiation.
-- **Resilient**: a failing forecast never blocks the measurements; the last good forecast is kept; the forecast
-  and the city geocoding are cached (fewer API calls).
-- **Demo mode** (optional API key): see below.
-- **No-key observation fallback**: if the WU API is unavailable and a forecast city is set, the
-  integration reads the nearest station's data from WU's public location page instead -
-  transparently marked (`observation_source`, `fallback_source_station`).
-- **UV level (WHO category) and a UV-protection binary sensor**: a category computed from the
-  UV index (low…extreme), plus a sensor that is `on` when protection is recommended - on by default.
-- **Air quality and pollen (optional)**: European and US AQI, 6 pollutants, 6 pollen species
-  (including ragweed) from Open-Meteo, no key needed - see below.
-- **Sunshine-duration (today) sensor**, and automatic filling of missing measurements (wind
-  gust, precipitation rate, solar radiation, UV) from an always-on, key-less Open-Meteo
-  supplement whenever your own measurement doesn't have them - transparently flagged
-  (`estimated` attribute) - see below.
+KNMI via Open-Meteo uses `knmi_seamless`: HARMONIE-AROME covers approximately the
+first 60 hours, followed by ECMWF. This is one selected API provider with a documented
+model transition. It is not a direct connection to the KNMI Open Data API.
+
+Buienradar's public five-day feed is national, not a forecast at the configured
+station's coordinates. Temperatures represent the national min/max envelope.
+Unequal precipitation ranges are not converted into invented single amounts;
+undocumented wind units are not shown as km/h. The separate two-hour rain nowcast
+is not included in this release.
+
+The returned period may be shorter than the maximum. Missing fields remain unknown.
+On failure, the last good forecast from the **same selection** is marked stale and
+kept for at most 12 hours. Changing provider, model or city invalidates the old cache.
+Weather Underground and Buienradar advertise daily forecast support only in HA.
 
 ## Installation
 
-**HACS (recommended):** HACS → Integrations → `⋮` → *Custom repositories* → `https://github.com/dielessen/wunderground-ha`
-(category *Integration*) → install → restart Home Assistant.
-**Manual:** copy `custom_components/wunderground_pws` into `config/custom_components/` and restart.
-Minimum Home Assistant version: **2024.12.0**.
+HACS → Integrations → Custom repositories →
+`https://github.com/dielessen/wunderground-ha` → category **Integration** → install
+and restart Home Assistant.
 
-## Setup
+For manual installation, copy `custom_components/wunderground_pws` into
+`config/custom_components/` and restart.
 
-*Settings → Devices & services → Add integration → "Wunderground PWS"*
+The inherited advertised minimum Home Assistant version is 2024.12.0; validation
+currently uses the current HA test dependencies on Python 3.14/Linux.
 
-| Field | Description |
+## Setup and changing provider
+
+Settings → Devices & services → Add integration → **Wunderground PWS**.
+For an installed entry, open its **Configure** options to change the forecast source.
+
+| Field | Meaning |
 |---|---|
-| Station ID | e.g. `IKAPOS27` (cannot be changed later – add a new entry for another station) |
-| API key | your key from the [WU account](https://www.wunderground.com/member/api-keys); **empty = demo mode** |
-| Update interval | 1–60 minutes (5 recommended) |
-| Forecast city | optional; empty = the station's coordinates |
-| City country code | e.g. `NL`; filters geocoding and selects the fallback country |
-| Forecast source | `auto` / `blend` / WU only / MET Norway only / Open-Meteo only |
-| Open-Meteo model | (options) automatic / ECMWF IFS / DWD ICON-EU / ICON seamless |
+| Station ID | Your WU PWS identifier; add another entry to change stations |
+| API key | Your WU observation key; blank starts best-effort website key discovery |
+| Update interval | Station observation interval, 1–60 minutes |
+| Forecast / fallback city | Optional; empty uses station coordinates for forecasts |
+| City country code | Two-letter code such as NL, used for geocoding and the public observation fallback |
+| Forecast source | Exactly one provider from the table above |
+| Personal Weerlive API key | Required only for Weerlive; separate from the WU key |
+| Open-Meteo weather model | Applies only when the source is Open-Meteo; KNMI has its own fixed model choice |
+| Air quality & pollen | Optional independent Open-Meteo data service |
 
-### Demo mode (no API key)
-With an empty key the integration tries to extract a public key embedded in the WU website and **validates it
-with a real call** before saving it. After a failed attempt it waits 15 minutes (max. 3 attempts), then Home Assistant
-asks you to re-authenticate. A key you typed yourself is never replaced automatically.
+For Weerlive and Buienradar, set the city country code to **NL**. Get your personal
+Weerlive key from [Weerlive's API page](https://weerlive.nl/delen.php). Its 300-request
+daily quota is per key: normal 30-minute forecast refreshes cost about 48 requests
+per day per entry, plus manual refreshes/retries. Multiple entries share your quota.
+The integration never uses the shared demo key in production.
 
-> **Important:** the shared key can be refused by WU at any time (on 2026-10-31 the key extracted from the website
-> was already rejected by the observation endpoint). **For reliable, long-term use get your own API key** – WU gives it
-> free to PWS owners: <https://www.wunderground.com/member/api-keys>. Without a key the forecast can still come from
-> MET Norway / Open-Meteo (`metno` / `openmeteo` source); if a forecast **city** is also set, observations work
-> without a key too - from WU's own public location page (see "No-key observation fallback" below).
+## Observations and supplementary data
 
-### No-key observation fallback (works without an API key or demo mode)
-When the WU API is unavailable (no key, demo-mode key rejected) **and** a forecast **city** is set, the
-integration reads current conditions (temperature, humidity, pressure, wind, dew point, precipitation) from
-`wunderground.com/weather/{country}/{city}` - a genuinely server-rendered public page (unlike `/dashboard/pws/{id}`,
-which only fills in after JavaScript runs and therefore cannot be used here).
+The forecast selector controls **forecasts**. This integration remains built around
+a WU PWS for current observations and its existing entity identifiers. It is not a
+standalone replacement for the observation service when selecting another forecast.
 
-**Known limits, worth knowing:**
-- This is WU's own choice of the *nearest* station for that city - **not necessarily** your own configured
-  station. For Kaposvár it is currently `IKAPOS10`, not `IKAPOS27`. The actual source is always visible via the
-  `observation_source` (`wunderground_api` / `wu_citypage`) and `fallback_source_station` attribute/sensor - it
-  is never silently merged with your own station's identity.
-- It scrapes an undocumented, unofficial page; if WU redesigns it this source can stop working (the integration
-  degrades gracefully when that happens, it does not crash).
-- **Filled in from real data:** coordinates (from the city's geocoding), wind bearing in degrees
-  (compass-sector centre, a disclosed +-11.25 deg estimate), heat index (standard formula). Wind
-  gust, precipitation rate, solar radiation and UV are filled in too - see "Solar supplement"
-  below, which works regardless of which source this is, not just here.
+A personal [WU key](https://www.wunderground.com/member/api-keys) is recommended.
+Shared keys discovered from the WU website may be rejected at any time. With a city
+and country configured, observations can fall back to an unofficial public WU city
+page. That page may report a different nearby station; `observation_source` and
+`fallback_source_station` expose this. Its parser has only been verified against a
+Hungarian metric fixture; Dutch page layout and unit compatibility are not guaranteed.
+Blank country disables this public-page fallback. Existing entries retain HU until
+changed in options. New entries suggest Home Assistant's country.
 
-### Air quality, pollen and UV (optional, `M3`)
+Independent Open-Meteo supplementary requests provide estimated missing gusts,
+precipitation rate, radiation and UV, plus forecast sunshine duration for today.
+Filled values are flagged `estimated`. Optional air-quality/pollen requests are
+also separate from forecast selection. The forecast itself is never blended.
 
-Requested in issue `#1`: air pollution, pollen and UV risk from a free, key-less source
-(Open-Meteo Air Quality API, CAMS Europe/Global models, CC BY 4.0).
+Other features include derived temperatures, cloud base, absolute humidity,
+station health, daily measured extremes, pressure tendency, diagnostic sensors,
+redacted diagnostics and the `wunderground_pws.refresh` service.
 
-**Off by default** (one extra API call per refresh) - turn it on in the entry's **Configure**
-options (*"Air quality & pollen sensors"*). Once enabled, 14 new sensors appear in the entity
-list, but - like the forecast-accuracy sensors - each one must also be **enabled individually**
-(niche, diagnostic-grade data, off by default so it doesn't needlessly load the refresh cycle
-or clutter the entity list).
+## Upgrading
 
-- **Air Quality Index:** European (EEA) and US (EPA) AQI, each with its own official band
-  (`level` attribute).
-- **Pollutants:** PM2.5, PM10, nitrogen dioxide, sulphur dioxide, ozone, carbon monoxide (µg/m³).
-- **Pollen (6 species):** alder, birch, grass, mugwort, olive, **ragweed** - Hungary's dominant
-  late-summer allergen and the main motivation for this feature. Load-class thresholds
-  (low/moderate/high/very high) come from MeteoSwiss's official, species-specific table.
-  **Olive deliberately has no category** (raw value only): no single, confidently citable
-  European scale was found for it - a missing category is better than a fabricated one.
-
-### Solar supplement and filling in missing data (`M3b`, always on)
-
-A new, **always-on** (cannot be turned off), key-less Open-Meteo request - independent of
-whichever `forecast_source` is configured - fills in missing measurement fields and adds one
-new sensor:
-
-- **`sunshine_duration` (today):** today's total (so-far/forecast) sunshine duration, in minutes.
-- **Fills in a field only when your own measurement is genuinely missing it** (never overrides
-  a real value): **wind gust**, **precipitation rate**, **solar radiation**, **UV index**. Each
-  affected sensor exposes an `estimated` attribute whenever its value came from here.
-- This **removes the earlier UV limitation**: the UV fill used to only work when Open-Meteo was
-  the actual forecast source (MET Norway has no UV data) - this request always runs regardless.
-- Uses the same Open-Meteo source as the forecast (no new attribution needed).
-
-## Data sources
-
-| Data | Source | Key |
-|---|---|---|
-| Current measurements | Weather Underground `v2/pws/observations/current` | yes |
-| Current measurements (fallback, nearest station) | WU public location page (`weather/{country}/…`), unofficial | no |
-| Forecast | WU `v3/wx/forecast/daily/5day` (fallback: `7day`) | yes |
-| Forecast | MET Norway Locationforecast 2.0 (CC BY 4.0) | no |
-| Forecast, geocoding | Open-Meteo (CC BY 4.0) | no |
-| Air quality, pollen (optional) | Open-Meteo Air Quality API, CAMS (CC BY 4.0) | no |
-
-Required attributions: see [CREDITS](CREDITS.md). Hourly data comes from Open-Meteo or MET Norway (the WU PWS API has no hourly forecast). The `forecast_source_used` attribute shows which source answered.
-
-## Location and regional settings
-Enter your own station ID; no station or city is preselected. Leave the city empty
-to use the station's coordinates for forecasts. MET Norway is a forecast provider,
-not a fixed location setting.
-
-Set **City country code** to `NL` for the Netherlands (or your location's two-letter
-country code). New entries suggest Home Assistant's country. The code filters
-city geocoding and selects the public fallback URL (`weather/nl/...`, for example).
-An empty code disables the public-page fallback. Existing entries retain `HU`
-for compatibility until you change it in the integration options.
-
-The unofficial public-page parser has only been verified against a Hungarian
-metric page fixture. Selecting another country fixes routing, but does not
-guarantee that its page layout and units match. Prefer your own WU API key.
-Some locations, including US locations, need a more specific WU URL path.
+Configuration schema 4 preserves station/entity IDs. Older `auto` and `blend`
+forecast modes migrate to **Open-Meteo**, a single provider. Other explicit source
+choices are preserved. Open the options after upgrading to choose your preferred
+provider. Old caches without a matching selection are discarded and refreshed.
 
 ## Weather card
 
 ```yaml
 type: weather-forecast
-entity: weather.wunderground_pws_ikapos27_weather
-forecast_type: hourly   # or: daily
+entity: weather.your_station_weather
+forecast_type: daily
 ```
 
-## Upgrading
-Existing entries migrate automatically (config version 3); entity ids do not change.
+Use `hourly` only with an hourly-capable provider. Select the actual weather entity
+from your Home Assistant instance.
 
-## Development & licence
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Report bugs and ideas on [GitHub Issues](https://github.com/dielessen/wunderground-ha/issues).
-MIT – Author: Aiasz ([LICENSE](LICENSE)).
+## Provider terms and attribution
+
+- KNMI data via [Open-Meteo](https://open-meteo.com/en/docs/knmi-api): CC BY 4.0;
+  [free service terms](https://open-meteo.com/en/terms) restrict API use to non-commercial purposes.
+- [Weerlive](https://weerlive.nl/delen.php): private/study use with linked attribution,
+  personal key and 300 requests/day. Professional use requires a suitable service.
+- [Buienradar.nl](https://www.buienradar.nl): non-commercial website/intranet use with
+  linked attribution. Mobile/commercial applications require permission; review the
+  [provider's published terms](https://www.buienradar.nl/overbuienradar/gratis-weerdata)
+  for your deployment. No permission is implied by this integration's code license.
+- MET Norway: Locationforecast 2.0, CC BY 4.0, identifying User-Agent and conditional caching.
+
+See [CHANGELOG](CHANGELOG.md), [development guide](docs/DEVELOPMENT.md) and
+[review notes](docs/REVIEW.md). Report bugs on [GitHub Issues](https://github.com/dielessen/wunderground-ha/issues).
+The code is MIT licensed; provider data/service terms apply separately.

@@ -46,7 +46,14 @@ async def test_falls_back_to_citypage_when_key_discovery_fails_and_city_is_set(
     aioclient_mock.get(WU_DASHBOARD_URL.format(station_id=STATION), status=404)  # discovery fails
     aioclient_mock.get(wu_citypage.page_url("Kaposvár"), text=CITYPAGE_HTML)
 
-    entry = make_entry(data={"api_key": "", "api_key_source": "legacy", "city": "Kaposvár"})
+    entry = make_entry(
+        data={
+            "api_key": "",
+            "api_key_source": "legacy",
+            "city": "Kaposvár",
+            "forecast_source": "openmeteo",
+        }
+    )
     await _setup(hass, entry)
 
     assert entry.state is ConfigEntryState.LOADED
@@ -159,7 +166,14 @@ async def test_refresh_recovers_once_the_real_api_starts_working_again(
     mock_apis(aioclient_mock)
     aioclient_mock.get(WU_DASHBOARD_URL.format(station_id=STATION), status=404)
     aioclient_mock.get(wu_citypage.page_url("Kaposvár"), text=CITYPAGE_HTML)
-    entry = make_entry(data={"api_key": "", "api_key_source": "legacy", "city": "Kaposvár"})
+    entry = make_entry(
+        data={
+            "api_key": "",
+            "api_key_source": "legacy",
+            "city": "Kaposvár",
+            "forecast_source": "openmeteo",
+        }
+    )
     await _setup(hass, entry)
     assert _state(hass, "sensor", f"{STATION}_observation_source").state == "wu_citypage"
 
@@ -184,7 +198,14 @@ async def test_fallback_fills_uv_from_forecast_and_coords_from_geocoded_city(
     mock_apis(aioclient_mock)
     aioclient_mock.get(WU_DASHBOARD_URL.format(station_id=STATION), status=404)
     aioclient_mock.get(wu_citypage.page_url("Kaposvár"), text=CITYPAGE_HTML)
-    entry = make_entry(data={"api_key": "", "api_key_source": "legacy", "city": "Kaposvár"})
+    entry = make_entry(
+        data={
+            "api_key": "",
+            "api_key_source": "legacy",
+            "city": "Kaposvár",
+            "forecast_source": "openmeteo",
+        }
+    )
     await _setup(hass, entry)
 
     weather = _state(hass, "weather", f"{STATION}_weather")

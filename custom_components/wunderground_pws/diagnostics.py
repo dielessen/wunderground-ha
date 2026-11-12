@@ -15,11 +15,12 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import ATTR_LAT, ATTR_LON, CONF_API_KEY, CONF_CITY
+from .const import ATTR_LAT, ATTR_LON, CONF_API_KEY, CONF_CITY, CONF_WEERLIVE_API_KEY
 from .coordinator import WundergroundConfigEntry
 
 TO_REDACT = {
     CONF_API_KEY,
+    CONF_WEERLIVE_API_KEY,
     CONF_CITY,
     ATTR_LAT,
     ATTR_LON,

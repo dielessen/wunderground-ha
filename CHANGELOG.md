@@ -3,7 +3,18 @@
 Historical upstream releases below are English summaries. The original detailed
 records remain in Git history. Original author: Aiasz; see CREDITS.md.
 
-## Unreleased
+## 1.8.0 — 2026-11-12
+
+- Add a single forecast provider selector: Open-Meteo, KNMI via Open-Meteo,
+  MET Norway, Weather Underground, Weerlive and Buienradar.
+- Add Dutch forecast adapters, personal Weerlive key validation/redaction,
+  country validation, explicit coverage and forecast capability labels.
+- Remove cross-provider fallback, forecast blending and borrowed hourly data.
+- Migrate legacy auto/blend settings to Open-Meteo (schema 4), preserving entity IDs.
+- Bind persisted forecasts to the selection to prevent stale data from another provider.
+- Add recorded forecast fixtures and regression tests. Document attribution, quota
+  and the national scope of Buienradar's daily feed.
+
 
 - Make English the primary repository documentation language.
 - Point installation, documentation and issue links to dielessen/wunderground-ha.

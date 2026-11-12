@@ -3,14 +3,15 @@
     "step": {
       "user": {
         "title": "Set up Wunderground PWS",
-        "description": "Enter the Weather Underground station ID. The API key is optional: if you leave it empty, the integration tries to obtain one automatically (demo mode). Entering a forecast city shows a 7-day forecast on the weather card, and also lets the integration fall back to a public, no-key Weather Underground page for that city if the station's own API is ever unavailable.",
+        "description": "Enter your Weather Underground station ID and observation API key (optional: automatic discovery). Choose one forecast provider. No forecasts are combined and no other provider is contacted for missing hours or failures. Weather Underground and Buienradar provide daily forecasts only. Weerlive needs your own key and country code NL; Buienradar also needs NL and provides a national forecast. Open-Meteo weather model applies only to the Open-Meteo source.",
         "data": {
           "station_id": "Your Weather Underground station ID",
           "api_key": "API key (empty = automatic discovery)",
           "scan_interval": "Update interval (minutes)",
           "city": "Forecast / fallback city (optional)",
           "forecast_source": "Forecast source",
-          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback",
+          "weerlive_api_key": "Personal Weerlive API key (only for Weerlive)"
         }
       },
       "discover": {
@@ -34,7 +35,10 @@
       "unknown_station": "The station was not found or has not reported recent data. Check the station ID.",
       "api_key_required": "The API key cannot be empty.",
       "station_id_required": "The station ID cannot be empty.",
-      "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually."
+      "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually.",
+      "invalid_source": "Select one forecast provider.",
+      "netherlands_required": "This forecast provider requires city country code NL.",
+      "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     },
     "abort": {
       "already_configured": "This station is already configured.",
@@ -45,7 +49,7 @@
     "step": {
       "init": {
         "title": "Wunderground PWS options (station {station_id})",
-        "description": "Clearing the API key field starts the automatic key discovery. The station ID cannot be changed - add a new entry for another station.\n\nForecast source **auto** tries Weather Underground, then MET Norway, then Open-Meteo.\n\n**blend** combines all sources into one consensus forecast (best accuracy, more API calls). Hourly data comes from Open-Meteo / MET Norway.",
+        "description": "The station ID cannot be changed; add another entry for a different PWS. Clearing the WU key starts key discovery. Choose one forecast provider. No forecasts are combined and no other provider is contacted for missing hours or failures. Weather Underground and Buienradar provide daily forecasts only. Weerlive needs your own key and country code NL; Buienradar also needs NL and provides a national forecast. Open-Meteo weather model applies only to the Open-Meteo source.",
         "data": {
           "api_key": "API key (empty = automatic discovery)",
           "scan_interval": "Update interval (minutes)",
@@ -53,7 +57,8 @@
           "forecast_source": "Forecast source",
           "openmeteo_model": "Open-Meteo weather model",
           "enable_air_quality": "Air quality & pollen sensors (extra API call per refresh)",
-          "country_code": "City country code (e.g. NL); empty disables the public-page fallback"
+          "country_code": "City country code (e.g. NL); empty disables the public-page fallback",
+          "weerlive_api_key": "Personal Weerlive API key (only for Weerlive)"
         }
       }
     },
@@ -61,17 +66,21 @@
       "cannot_connect": "Could not connect to the Weather Underground API. Please try again later.",
       "invalid_auth": "The API key was rejected by Weather Underground.",
       "unknown_station": "The station was not found or has not reported recent data.",
-      "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually."
+      "discovery_failed": "The automatic API key discovery did not find a key. Enter one manually.",
+      "invalid_source": "Select one forecast provider.",
+      "netherlands_required": "This forecast provider requires city country code NL.",
+      "weerlive_key_required": "Enter your personal Weerlive API key from weerlive.nl/delen.php."
     }
   },
   "selector": {
     "forecast_source": {
       "options": {
-        "auto": "Automatic (Weather Underground → MET Norway → Open-Meteo)",
-        "wunderground": "Weather Underground only",
-        "metno": "MET Norway only",
-        "openmeteo": "Open-Meteo only",
-        "blend": "Blend of all sources (consensus)"
+        "openmeteo": "Open-Meteo (global; daily and hourly)",
+        "knmi": "KNMI via Open-Meteo (HARMONIE + ECMWF; daily and hourly)",
+        "metno": "MET Norway (daily and hourly)",
+        "wunderground": "Weather Underground (daily only)",
+        "weerlive": "Weerlive (Netherlands; 5 days / 24 hours; key required)",
+        "buienradar": "Buienradar (Netherlands national; 5 days; daily only)"
       }
     },
     "openmeteo_model": {
@@ -195,7 +204,9 @@
           "wunderground": "Weather Underground",
           "metno": "MET Norway",
           "openmeteo": "Open-Meteo",
-          "blend": "Blend (consensus)"
+          "knmi": "KNMI via Open-Meteo",
+          "weerlive": "Weerlive",
+          "buienradar": "Buienradar (Netherlands national)"
         }
       },
       "forecast_mae_wunderground": {

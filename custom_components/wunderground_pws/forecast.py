@@ -26,7 +26,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .blend import blend_daily, merge_observed_extremes, weights_from_mae
+from .blend import merge_observed_extremes
 from .const import (
     ATTR_LAT,
     ATTR_LON,
@@ -36,19 +36,20 @@ from .const import (
     CONF_COUNTRY,
     CONF_FORECAST_SOURCE,
     CONF_OPENMETEO_MODEL,
+    CONF_WEERLIVE_API_KEY,
     DEFAULT_CITY,
     DEFAULT_FORECAST_SOURCE,
     DEFAULT_OPENMETEO_MODEL,
     DOMAIN,
-    FORECAST_AUTO_ORDER,
     FORECAST_MAX_STALE,
-    FORECAST_SOURCE_AUTO,
-    FORECAST_SOURCE_BLEND,
+    FORECAST_SOURCE_BUIENRADAR,
+    FORECAST_SOURCE_KNMI,
     FORECAST_SOURCE_METNO,
     FORECAST_SOURCE_OPENMETEO,
+    FORECAST_SOURCE_WEERLIVE,
     FORECAST_SOURCE_WUNDERGROUND,
+    FORECAST_SOURCES,
     FORECAST_TTL,
-    HOURLY_SOURCES,
     LEGACY_COUNTRY,
 )
 from .models import (
@@ -57,7 +58,7 @@ from .models import (
     HourlyForecastPoint,
     local_midnight_utc_iso,
 )
-from .providers import open_meteo
+from .providers import buienradar, open_meteo, weerlive
 from .providers import wunderground as wu
 from .providers.base import ProviderError
 from .providers.breaker import CircuitBreaker
@@ -80,7 +81,7 @@ def _empty_bundle() -> ForecastBundle:
 
 
 class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
-    """Fetch, merge and cache the forecast."""
+    """Fetch and cache the selected provider’s forecast."""
 
     config_entry: ConfigEntry
 
@@ -105,6 +106,9 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
         self.city: str = get_setting(entry, CONF_CITY, DEFAULT_CITY)
         self.country: str = get_setting(entry, CONF_COUNTRY, LEGACY_COUNTRY)
         self.source: str = get_setting(entry, CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE)
+        if self.source not in FORECAST_SOURCES:
+            self.source = DEFAULT_FORECAST_SOURCE
+        self.weerlive_key = get_setting(entry, CONF_WEERLIVE_API_KEY, "")
         self.model: str = get_setting(entry, CONF_OPENMETEO_MODEL, DEFAULT_OPENMETEO_MODEL)
 
         self.data = _empty_bundle()
@@ -115,7 +119,7 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
         self._lock = asyncio.Lock()
         self._metno = MetNoClient(user_agent)
         self.breakers: dict[str, CircuitBreaker] = {
-            src: CircuitBreaker(BREAKER_THRESHOLD, BREAKER_COOLDOWN) for src in FORECAST_AUTO_ORDER
+            src: CircuitBreaker(BREAKER_THRESHOLD, BREAKER_COOLDOWN) for src in FORECAST_SOURCES
         }
         self._bundle_store: Store[ForecastBundle] = Store(
             hass, 1, f"{DOMAIN}.forecast.{entry.entry_id}"
@@ -141,7 +145,7 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
 
     @property
     def source_used(self) -> str:
-        """Source of the daily data (``blend`` for the consensus)."""
+        """Source of the daily forecast data."""
         return self.data.get("source") or ""
 
     def today_condition(self) -> str | None:
@@ -188,6 +192,8 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
         """
         self._coords = await self._async_resolve_coords(async_get_clientsession(self.hass))
         stored = await self._bundle_store.async_load()
+        if stored and stored.get("selection") != self._selection():
+            return
         if not stored or not stored.get("fetched_at"):
             return
         try:
@@ -249,13 +255,19 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
                     self.stale = False
             return self.data
 
-        self._apply_observed_extremes(bundle)
+        if self.source != FORECAST_SOURCE_BUIENRADAR:
+            self._apply_observed_extremes(bundle)
         self.stale = False
         self._retry_at = None
         self.fetched_at = now
         bundle["fetched_at"] = now.isoformat()
+        bundle["selection"] = self._selection()
         self._bundle_store.async_delay_save(lambda: bundle, 30)
         return bundle
+
+    def _selection(self) -> list[str]:
+        """Cache identity: never restore another provider or location selection."""
+        return [self.source, self.model, self.city, self.country]
 
     def _apply_observed_extremes(self, bundle: ForecastBundle) -> None:
         """Today's forecast range may not be narrower than what the station measured."""
@@ -326,6 +338,15 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
                 result: _SourceResult = (daily, [])  # WU has no hourly forecast
             elif src == FORECAST_SOURCE_METNO:
                 result = await self._metno.fetch_forecast(session, lat, lon, tz)
+            elif src in (FORECAST_SOURCE_WEERLIVE, FORECAST_SOURCE_BUIENRADAR):
+                if self.country.upper() != "NL":
+                    raise ProviderError("This forecast provider requires city country code NL")
+                if src == FORECAST_SOURCE_WEERLIVE:
+                    result = await weerlive.fetch_forecast(session, lat, lon, self.weerlive_key)
+                else:
+                    result = await buienradar.fetch_forecast(session)
+            elif src == FORECAST_SOURCE_KNMI:
+                result = await open_meteo.fetch_forecast(session, lat, lon, tz, "knmi_seamless")
             elif src == FORECAST_SOURCE_OPENMETEO:
                 result = await open_meteo.fetch_forecast(session, lat, lon, tz, self.model)
             else:
@@ -342,78 +363,17 @@ class ForecastCoordinator(DataUpdateCoordinator[ForecastBundle]):
     ) -> ForecastBundle:
         """Fetch according to the configured source mode."""
         tz = dt_util.get_default_time_zone()
-        if self.source == FORECAST_SOURCE_BLEND:
-            return await self._async_build_blend(session, coords, tz)
-
-        order = list(FORECAST_AUTO_ORDER) if self.source == FORECAST_SOURCE_AUTO else [self.source]
-        daily: list[DailyForecastPoint] = []
-        hourly: list[HourlyForecastPoint] = []
-        used = hourly_used = ""
-
-        # The configured chain: the first source with a daily forecast provides it,
-        # the first with hourly data provides that (one source usually does both).
-        for src in order:
-            result = await self._async_fetch_source(src, session, coords, tz)
-            if result is None:
-                continue
-            day_points, hour_points = result
-            if day_points and not daily:
-                daily, used = day_points, src
-            if hour_points and not hourly:
-                hourly, hourly_used = hour_points, src
-            if daily and hourly:
-                break
-
-        # "Weather Underground only" cannot deliver hourly data (no such WU product):
-        # borrow it from the hourly-capable sources so the hourly card still works.
-        if not hourly and self.source == FORECAST_SOURCE_WUNDERGROUND:
-            for src in HOURLY_SOURCES:
-                result = await self._async_fetch_source(src, session, coords, tz)
-                if result and result[1]:
-                    hourly, hourly_used = result[1], src
-                    break
-
-        if not daily and not hourly:
-            raise ProviderError("all forecast sources failed")
+        result = await self._async_fetch_source(self.source, session, coords, tz)
+        if result is None or not any(result):
+            raise ProviderError("selected forecast source returned no forecast")
+        daily, hourly = result
+        self._record_predictions({self.source: daily}, tz)
         return ForecastBundle(
             daily=daily,
             hourly=hourly,
-            source=used,
-            hourly_source=hourly_used,
-            sources_used=[s for s in (used, hourly_used) if s],
-        )
-
-    async def _async_build_blend(
-        self, session: aiohttp.ClientSession, coords: tuple[float, float], tz: tzinfo
-    ) -> ForecastBundle:
-        """Fetch ALL sources in parallel and merge them (F02); feed the scorer (F21)."""
-        results = await asyncio.gather(
-            *(self._async_fetch_source(src, session, coords, tz) for src in FORECAST_AUTO_ORDER)
-        )
-        by_source = dict(zip(FORECAST_AUTO_ORDER, results, strict=True))
-        per_source = {src: r[0] for src, r in by_source.items() if r and r[0]}
-        if not per_source:
-            raise ProviderError("all forecast sources failed")
-
-        scorer = self.state_store.state.scorer
-        weights = weights_from_mae({src: scorer.mae(src) for src in per_source})
-        daily = blend_daily(per_source, FORECAST_AUTO_ORDER, weights)
-
-        hourly: list[HourlyForecastPoint] = []
-        hourly_used = ""
-        for src in HOURLY_SOURCES:
-            result = by_source.get(src)
-            if result and result[1]:
-                hourly, hourly_used = result[1], src
-                break
-
-        self._record_predictions(per_source, tz)
-        return ForecastBundle(
-            daily=daily,
-            hourly=hourly,
-            source=FORECAST_SOURCE_BLEND,
-            hourly_source=hourly_used,
-            sources_used=list(per_source),
+            source=self.source if daily else "",
+            hourly_source=self.source if hourly else "",
+            sources_used=[self.source],
         )
 
     def _record_predictions(

@@ -119,12 +119,12 @@ async def test_forecast_comes_from_wunderground_first(hass, aioclient_mock, free
     assert forecast[2]["wind_speed"] == 25
 
 
-async def test_auto_fallback_to_open_meteo(hass, aioclient_mock, freezer) -> None:
+async def test_legacy_auto_migrates_to_one_open_meteo_source(hass, aioclient_mock, freezer) -> None:
     freezer.move_to(NOW)
     mock_apis(aioclient_mock, wu_forecast_status=401)
-    await _setup(hass, make_entry())
+    await _setup(hass, make_entry(data={"forecast_source": "auto"}))
     weather = _state(hass, "weather", f"{STATION}_weather")
-    # WU refused, MET Norway returned an empty series -> Open-Meteo.
+    # Legacy auto is migrated to a single explicitly selected provider.
     assert weather.attributes["forecast_source_used"] == "openmeteo"
 
 
@@ -336,7 +336,7 @@ async def test_migration_options_no_longer_shadow_the_key(hass, aioclient_mock, 
     )
     await _setup(hass, entry)
 
-    assert entry.version == 3
+    assert entry.version == 4
     assert entry.state is ConfigEntryState.LOADED
     assert entry.data[CONF_API_KEY] == API_KEY
     assert entry.data[CONF_SCAN_INTERVAL] == 10  # option value merged into data

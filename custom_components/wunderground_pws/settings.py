@@ -24,6 +24,7 @@ from .const import (
     CONF_OPENMETEO_MODEL,
     CONF_SCAN_INTERVAL,
     CONF_STATION_ID,
+    CONF_WEERLIVE_API_KEY,
     DEFAULT_CITY,
     DEFAULT_ENABLE_AIR_QUALITY,
     DEFAULT_FORECAST_SOURCE,
@@ -50,6 +51,7 @@ def settings_signature(entry: ConfigEntry) -> tuple[Any, ...]:
     key without a reload (and persisting a re-discovered key must not reload).
     """
     defaults = {
+        CONF_WEERLIVE_API_KEY: "",
         CONF_STATION_ID: DEFAULT_STATION_ID,
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
         CONF_CITY: DEFAULT_CITY,

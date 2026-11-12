@@ -180,7 +180,7 @@ async def test_weather_entity_offers_hourly_forecast(hass, aioclient_mock, freez
         wu_forecast_status=401,
         open_meteo=_om_with_hours(datetime(2026, 10, 31, 10, tzinfo=UTC)),
     )
-    entry = make_entry()
+    entry = make_entry(data={"forecast_source": "openmeteo"})
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
@@ -201,8 +201,8 @@ async def test_weather_entity_offers_hourly_forecast(hass, aioclient_mock, freez
     assert hourly[0]["condition"] == "cloudy"
 
 
-async def test_wunderground_only_borrows_hourly_data(hass, aioclient_mock, freezer) -> None:
-    """WU has no hourly forecast: the hourly card still works via Open-Meteo."""
+async def test_wunderground_only_leaves_hourly_empty(hass, aioclient_mock, freezer) -> None:
+    """WU never borrows hourly forecasts from another provider."""
     freezer.move_to(NOW)
     await hass.config.async_set_time_zone("Europe/Budapest")
     mock_apis(aioclient_mock, open_meteo=_om_with_hours(datetime(2026, 10, 31, 10, tzinfo=UTC)))
@@ -213,6 +213,6 @@ async def test_wunderground_only_borrows_hourly_data(hass, aioclient_mock, freez
 
     forecast = entry.runtime_data.forecast
     assert forecast.source_used == "wunderground"  # daily from WU
-    assert forecast.data["hourly_source"] == "openmeteo"
-    assert len(forecast.hourly) == 5
+    assert forecast.data["hourly_source"] == ""
+    assert forecast.hourly == []
     assert len(calls_to(aioclient_mock, "open-meteo")) >= 1

@@ -37,3 +37,17 @@ This repository does contain the upstream integration code.
 - Cloud base: Espy approximation (125 m/degree C).
 - Clear-sky radiation: Kasten & Czeplak (1980).
 - Solar elevation: NOAA General Solar Position Calculations.
+
+## Dutch forecast adapters (1.8.0)
+
+- KNMI HARMONIE-AROME via Open-Meteo, using knmi_seamless (ECMWF extension).
+  [API documentation](https://open-meteo.com/en/docs/knmi-api); CC BY 4.0 and
+  Open-Meteo's non-commercial free-service limits apply.
+- Weather data via [Weerlive.nl](https://weerlive.nl/delen.php): private/study use,
+  linked credit and a personal key; 300 requests/day per key.
+- [Buienradar.nl](https://www.buienradar.nl): national daily forecast;
+  [published terms](https://www.buienradar.nl/overbuienradar/gratis-weerdata) require
+  linked attribution and restrict use. Mobile/commercial use needs permission.
+- New fixtures were captured from the documented public Buienradar JSON feed and
+  Weerlive's documented demo endpoint on 12 November 2026. Only forecast numerical
+  data/category fields are retained; no personal credentials or weather-report prose.

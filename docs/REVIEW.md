@@ -47,7 +47,23 @@ Country filtering follows the [Open-Meteo geocoding API](https://open-meteo.com/
 - **Compatibility:** CI targets current test dependencies on Python 3.14. The
   advertised minimum Home Assistant 2024.12 has not been independently retested.
 
-## Validation
+## Follow-up: single-provider forecasts (1.8.0)
+
+The forecast coordinator now selects exactly one provider, including KNMI via
+Open-Meteo, Weerlive and Buienradar. Legacy auto/blend modes migrate to Open-Meteo.
+WU/Buienradar have no hourly forecast; no other provider supplies missing hours.
+Persisted caches carry a provider/model/location identity. Provider constraints and
+terms are documented in the main README. PWS observations and independent solar /
+optional air-quality supplements are separate from forecast selection.
+
+Validation for 1.8.0: 294 tests pass under Linux/WSL, including provider selection,
+migration, provider switching/cache invalidation, failure isolation, new response
+parsers, credentials and diagnostics. A live KNMI/Open-Meteo request returned seven
+daily and 168 hourly points using the integration's requested variables; the
+integration exposes at most 72 hours. This is not a live HA installation test.
+
+## Validation (initial review)
+
 
 The unmodified upstream baseline passed 271 tests under Linux/WSL. All **277 tests**
 in the updated suite pass, along with Ruff lint and formatting checks. The updated

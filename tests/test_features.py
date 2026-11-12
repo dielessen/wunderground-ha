@@ -70,42 +70,34 @@ def _metno_series():
     }
 
 
-async def test_blend_merges_all_sources_and_records_predictions(
+async def test_legacy_blend_migrates_to_single_source_and_records_predictions(
     hass, aioclient_mock, freezer
 ) -> None:
     freezer.move_to(NOW)
     mock_apis(aioclient_mock, metno=_metno_series())
     entry = make_entry(data={"forecast_source": "blend"})
     await _setup(hass, entry)
-
     forecast = entry.runtime_data.forecast
-    assert forecast.source_used == "blend"
-    assert sorted(forecast.data["sources_used"]) == ["metno", "openmeteo", "wunderground"]
-    day = forecast.daily[1]  # 1 Nov: WU 12 / 3, Open-Meteo 11 / 4, MET max 12 / min 2
-    assert day["temperature"] == 12.0  # median of 12, 11, 12
-    assert day["templow"] == 3.0  # median of 3, 4, 2
-    assert day["condition"] == "rainy"  # all three agree (WU icon 30 = partly cloudy loses)
-    assert set(day["sources"]) == {"wunderground", "metno", "openmeteo"}
-
-    # Tomorrow's forecast of every source is stored for the next-day scoring (F21).
+    assert entry.version == 4
+    assert entry.data["forecast_source"] == "openmeteo"
+    assert forecast.source_used == "openmeteo"
+    assert forecast.data["sources_used"] == ["openmeteo"]
+    assert not calls_to(aioclient_mock, METNO_FORECAST_URL)
     predictions = entry.runtime_data.state_store.state.scorer.predictions["2026-11-01"]
-    assert set(predictions) == {"wunderground", "metno", "openmeteo"}
-    assert predictions["metno"] == {"tmax": 12.0, "tmin": 2.0}
-
-    weather = _state(hass, "weather", f"{STATION}_weather")
-    assert weather.attributes["forecast_source_used"] == "blend"
-    assert "MET Norway" in weather.attributes["attribution"]
-    assert "Open-Meteo" in weather.attributes["attribution"]
+    assert set(predictions) == {"openmeteo"}
 
 
-async def test_blend_survives_one_failing_source(hass, aioclient_mock, freezer) -> None:
+async def test_selected_source_failure_never_falls_back(hass, aioclient_mock, freezer) -> None:
     freezer.move_to(NOW)
     mock_apis(aioclient_mock, wu_forecast_status=500, metno=_metno_series())
-    entry = make_entry(data={"forecast_source": "blend"})
+    entry = make_entry(data={"forecast_source": "wunderground"})
     await _setup(hass, entry)
-    forecast = entry.runtime_data.forecast
-    assert forecast.source_used == "blend"
-    assert sorted(forecast.data["sources_used"]) == ["metno", "openmeteo"]
+    assert entry.runtime_data.forecast.daily == []
+    assert not calls_to(aioclient_mock, METNO_FORECAST_URL)
+    # The independent solar supplement may call Open-Meteo, but no forecast request may.
+    assert not [
+        c for c in calls_to(aioclient_mock, OPEN_METEO_FORECAST_URL) if "hourly=" in str(c[1])
+    ]
 
 
 async def test_pressure_tendency_sensors(hass, aioclient_mock, freezer) -> None:
@@ -208,12 +200,13 @@ async def test_stored_forecast_is_restored_when_every_source_fails(
 ) -> None:
     """F20: after a restart with the APIs down the last good forecast is still shown."""
     freezer.move_to(NOW)
-    entry = make_entry()
+    entry = make_entry(data={"forecast_source": "metno"})
     stored = {
         "daily": [
             {"datetime": "2026-10-31T23:00:00+00:00", "temperature": 9.0, "condition": "rainy"}
         ],
         "hourly": [],
+        "selection": ["metno", "best_match", "", "HU"],
         "source": "metno",
         "hourly_source": "",
         "sources_used": ["metno"],
@@ -271,12 +264,11 @@ async def test_kaposvar_forecast_uses_the_geocoded_town_not_a_default(
     assert len(geocoding) == 1
     assert "Kaposv%C3%A1r" in str(geocoding[0][1]) or "Kaposv" in str(geocoding[0][1])
     assert "language=en" in str(geocoding[0][1])  # Home Assistant language of the test
-    for url_part in (OPEN_METEO_FORECAST_URL, METNO_FORECAST_URL):
-        (call, *_) = calls_to(aioclient_mock, url_part)
-        assert "46.3667" in str(call[1])
-        assert "17.8" in str(call[1])
-    wu_call = calls_to(aioclient_mock, WU_FORECAST_URL.format(product="5day"))[0]
-    assert "46.3667%2C17.8000" in str(wu_call[1]) or "46.3667,17.8000" in str(wu_call[1])
+    (call, *_) = calls_to(aioclient_mock, OPEN_METEO_FORECAST_URL)
+    assert "46.3667" in str(call[1])
+    assert "17.8" in str(call[1])
+    assert not calls_to(aioclient_mock, METNO_FORECAST_URL)
+    assert not calls_to(aioclient_mock, WU_FORECAST_URL.format(product="5day"))
 
     weather = _state(hass, "weather", f"{STATION}_weather")
     assert weather.attributes["forecast_city"] == "Kaposvár"

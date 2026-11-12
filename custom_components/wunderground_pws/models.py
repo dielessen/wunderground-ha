@@ -56,6 +56,7 @@ class ForecastBundle(TypedDict, total=False):
     source: str  # source key of the daily data ("blend" for the consensus)
     hourly_source: str
     sources_used: list[str]
+    selection: list[str]  # selected provider/model/location cache identity
     fetched_at: str  # ISO UTC
 
 

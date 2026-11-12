@@ -39,7 +39,7 @@ USER_INPUT = {
     CONF_API_KEY: API_KEY,
     CONF_SCAN_INTERVAL: 5,
     CONF_CITY: "",
-    CONF_FORECAST_SOURCE: "auto",
+    CONF_FORECAST_SOURCE: "wunderground",
 }
 DASHBOARD = WU_DASHBOARD_URL.format(station_id=STATION)
 
@@ -67,7 +67,7 @@ async def test_user_flow_with_valid_key(hass, aioclient_mock) -> None:
     assert result["data"][CONF_STATION_ID] == "IKAPOS27"  # trimmed + upper-cased
     assert result["data"][CONF_API_KEY] == API_KEY
     assert result["data"][CONF_API_KEY_SOURCE] == API_KEY_SOURCE_MANUAL
-    assert result["version"] == 3
+    assert result["version"] == 4
 
 
 async def test_setup_suggests_home_country_without_foreign_station(hass, aioclient_mock) -> None:
@@ -214,7 +214,7 @@ async def test_options_can_enable_air_quality(hass, aioclient_mock) -> None:
             CONF_API_KEY: API_KEY,
             CONF_SCAN_INTERVAL: 5,
             CONF_CITY: "",
-            CONF_FORECAST_SOURCE: "auto",
+            CONF_FORECAST_SOURCE: "wunderground",
             CONF_ENABLE_AIR_QUALITY: True,
         },
     )
@@ -232,7 +232,12 @@ async def test_options_changed_key_applies_without_reload(hass, aioclient_mock) 
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {CONF_API_KEY: new_key, CONF_SCAN_INTERVAL: 5, CONF_CITY: "", CONF_FORECAST_SOURCE: "auto"},
+        {
+            CONF_API_KEY: new_key,
+            CONF_SCAN_INTERVAL: 5,
+            CONF_CITY: "",
+            CONF_FORECAST_SOURCE: "wunderground",
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
@@ -252,7 +257,7 @@ async def test_options_rejects_a_bad_key(hass, aioclient_mock) -> None:
             CONF_API_KEY: "c" * 32,
             CONF_SCAN_INTERVAL: 5,
             CONF_CITY: "",
-            CONF_FORECAST_SOURCE: "auto",
+            CONF_FORECAST_SOURCE: "wunderground",
         },
     )
     assert result["type"] is FlowResultType.FORM
@@ -265,7 +270,12 @@ async def test_options_blank_key_runs_discovery(hass, aioclient_mock) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {CONF_API_KEY: "", CONF_SCAN_INTERVAL: 5, CONF_CITY: "", CONF_FORECAST_SOURCE: "auto"},
+        {
+            CONF_API_KEY: "",
+            CONF_SCAN_INTERVAL: 5,
+            CONF_CITY: "",
+            CONF_FORECAST_SOURCE: "wunderground",
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_API_KEY] == DASHBOARD_KEY
@@ -278,7 +288,12 @@ async def test_options_blank_key_with_failed_discovery_shows_error(hass, aioclie
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {CONF_API_KEY: "", CONF_SCAN_INTERVAL: 5, CONF_CITY: "", CONF_FORECAST_SOURCE: "auto"},
+        {
+            CONF_API_KEY: "",
+            CONF_SCAN_INTERVAL: 5,
+            CONF_CITY: "",
+            CONF_FORECAST_SOURCE: "wunderground",
+        },
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {CONF_API_KEY: "discovery_failed"}

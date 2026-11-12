@@ -50,6 +50,7 @@ from .const import (
     CONF_OPENMETEO_MODEL,
     CONF_SCAN_INTERVAL,
     CONF_STATION_ID,
+    CONF_WEERLIVE_API_KEY,
     CONFIG_ENTRY_VERSION,
     DEFAULT_CITY,
     DEFAULT_ENABLE_AIR_QUALITY,
@@ -58,6 +59,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_STATION_ID,
     DOMAIN,
+    FORECAST_SOURCE_BUIENRADAR,
+    FORECAST_SOURCE_WEERLIVE,
     FORECAST_SOURCES,
     LEGACY_COUNTRY,
     MAX_SCAN_INTERVAL,
@@ -123,6 +126,17 @@ def _scan_interval_validator() -> vol.All:
     return vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL))
 
 
+def _provider_errors(source: str, country: str, weerlive_key: str) -> dict[str, str]:
+    """Validate selection before saving credentials or attempting WU discovery."""
+    if source not in FORECAST_SOURCES:
+        return {CONF_FORECAST_SOURCE: "invalid_source"}
+    if source in (FORECAST_SOURCE_WEERLIVE, FORECAST_SOURCE_BUIENRADAR) and country != "NL":
+        return {CONF_COUNTRY: "netherlands_required"}
+    if source == FORECAST_SOURCE_WEERLIVE and not weerlive_key:
+        return {CONF_WEERLIVE_API_KEY: "weerlive_key_required"}
+    return {}
+
+
 class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for Wunderground PWS."""
 
@@ -134,6 +148,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
         self._scan_interval: int = DEFAULT_SCAN_INTERVAL
         self._city: str = DEFAULT_CITY
         self._country: str = ""
+        self._weerlive_key: str = ""
         self._forecast_source: str = DEFAULT_FORECAST_SOURCE
         self._enable_air_quality: bool = DEFAULT_ENABLE_AIR_QUALITY
         self._discovered_key: str | None = None
@@ -152,13 +167,17 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input.get(CONF_COUNTRY, self.hass.config.country or "").strip().upper()
             )
             self._forecast_source = user_input.get(CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE)
+            self._weerlive_key = (user_input.get(CONF_WEERLIVE_API_KEY) or "").strip()
+            errors.update(
+                _provider_errors(self._forecast_source, self._country, self._weerlive_key)
+            )
             api_key = (user_input.get(CONF_API_KEY) or "").strip()
 
             if not self._station_id:
                 # A blank/whitespace-only station id used to be silently accepted and
                 # sent the flow into a dead-end demo-mode discovery for station "".
                 errors[CONF_STATION_ID] = "station_id_required"
-            else:
+            elif not errors:
                 await self.async_set_unique_id(self._station_id)
                 self._abort_if_unique_id_configured()
 
@@ -176,6 +195,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_STATION_ID, description={"suggested_value": DEFAULT_STATION_ID}
                 ): str,
                 vol.Optional(CONF_API_KEY, default=""): _KEY_SELECTOR,
+                vol.Optional(CONF_WEERLIVE_API_KEY, default=""): _KEY_SELECTOR,
                 vol.Optional(CONF_COUNTRY, default=self.hass.config.country or ""): vol.All(
                     str, str.strip, str.upper, vol.Match(r"^(?:[A-Z]{2})?$")
                 ),
@@ -273,6 +293,7 @@ class WundergroundPWSConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_CITY: self._city,
                 CONF_COUNTRY: self._country,
                 CONF_FORECAST_SOURCE: self._forecast_source,
+                CONF_WEERLIVE_API_KEY: self._weerlive_key,
             },
         )
 
@@ -353,9 +374,16 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                 .strip()
                 .upper()
             )
+            weerlive_key = (
+                user_input.get(CONF_WEERLIVE_API_KEY, get_setting(entry, CONF_WEERLIVE_API_KEY, ""))
+                or ""
+            ).strip()
+            errors.update(
+                _provider_errors(user_input[CONF_FORECAST_SOURCE], new_country, weerlive_key)
+            )
             final_key, final_source = current_key, current_source
 
-            if key_in != current_key or not key_in:
+            if not errors and (key_in != current_key or not key_in):
                 if key_in:
                     final_key, final_source = key_in, API_KEY_SOURCE_MANUAL
                 else:
@@ -391,6 +419,7 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
                         .strip()
                         .upper(),
                         CONF_FORECAST_SOURCE: user_input[CONF_FORECAST_SOURCE],
+                        CONF_WEERLIVE_API_KEY: weerlive_key,
                         CONF_OPENMETEO_MODEL: user_input.get(
                             CONF_OPENMETEO_MODEL, DEFAULT_OPENMETEO_MODEL
                         ),
@@ -403,6 +432,9 @@ class WundergroundPWSOptionsFlow(OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Optional(CONF_API_KEY, default=current_key): _KEY_SELECTOR,
+                vol.Optional(
+                    CONF_WEERLIVE_API_KEY, default=get_setting(entry, CONF_WEERLIVE_API_KEY, "")
+                ): _KEY_SELECTOR,
                 vol.Required(
                     CONF_SCAN_INTERVAL,
                     default=get_setting(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),

@@ -13,9 +13,8 @@ from datetime import timedelta
 
 DOMAIN = "wunderground_pws"
 
-# Config entry schema version. 3 = all settings merged into ``entry.data`` and
-# station id fixed for the lifetime of the entry (see ``async_migrate_entry``).
-CONFIG_ENTRY_VERSION = 3
+# Config schema 4: explicit single forecast provider; station identifiers stay fixed.
+CONFIG_ENTRY_VERSION = 4
 
 DEFAULT_STATION_ID = ""
 DEFAULT_SCAN_INTERVAL = 5  # minutes
@@ -35,15 +34,20 @@ FORECAST_SOURCE_METNO = "metno"
 FORECAST_SOURCE_OPENMETEO = "openmeteo"
 # Consensus of ALL sources (median / weighted mean, majority condition): PLAN.md F02.
 FORECAST_SOURCE_BLEND = "blend"
+FORECAST_SOURCE_KNMI = "knmi"
+FORECAST_SOURCE_WEERLIVE = "weerlive"
+FORECAST_SOURCE_BUIENRADAR = "buienradar"
+CONF_WEERLIVE_API_KEY = "weerlive_api_key"
 FORECAST_SOURCES = [
-    FORECAST_SOURCE_AUTO,
-    FORECAST_SOURCE_BLEND,
+    FORECAST_SOURCE_KNMI,
+    FORECAST_SOURCE_WEERLIVE,
+    FORECAST_SOURCE_BUIENRADAR,
     FORECAST_SOURCE_WUNDERGROUND,
     FORECAST_SOURCE_METNO,
     FORECAST_SOURCE_OPENMETEO,
 ]
-DEFAULT_FORECAST_SOURCE = FORECAST_SOURCE_AUTO
-# Order used by ``auto`` mode (and the tie-break order of ``blend``).
+DEFAULT_FORECAST_SOURCE = FORECAST_SOURCE_OPENMETEO
+# Legacy provider order retained for existing accuracy sensor identifiers.
 FORECAST_AUTO_ORDER = [
     FORECAST_SOURCE_WUNDERGROUND,
     FORECAST_SOURCE_METNO,
@@ -52,9 +56,7 @@ FORECAST_AUTO_ORDER = [
 # Hourly data exists only at these sources (the WU PWS API has no hourly forecast).
 HOURLY_SOURCES = [FORECAST_SOURCE_OPENMETEO, FORECAST_SOURCE_METNO]
 
-# Open-Meteo model choice (PLAN.md F03). Identifiers verified against the Open-Meteo
-# documentation (DWD ICON / ECMWF pages); ``dwd_icon_d2`` is left out on purpose: it
-# does not cover Hungary.
+# Open-Meteo model choices. Regional models require coverage at the selected location.
 OPENMETEO_MODEL_BEST = "best_match"
 OPENMETEO_MODELS = [OPENMETEO_MODEL_BEST, "ecmwf_ifs", "dwd_icon_eu", "dwd_icon_seamless"]
 DEFAULT_OPENMETEO_MODEL = OPENMETEO_MODEL_BEST
@@ -226,6 +228,9 @@ OBSERVATION_SOURCE_WU_API = "wunderground_api"
 OBSERVATION_SOURCE_WU_CITYPAGE = "wu_citypage"
 OBSERVATION_SOURCES = [OBSERVATION_SOURCE_WU_API, OBSERVATION_SOURCE_WU_CITYPAGE]
 ATTRIBUTION_FORECAST = {
+    FORECAST_SOURCE_KNMI: "Forecast: KNMI via Open-Meteo.com (CC BY 4.0)",
+    FORECAST_SOURCE_WEERLIVE: "Weather data via Weerlive.nl (https://weerlive.nl/delen.php)",
+    FORECAST_SOURCE_BUIENRADAR: "Buienradar.nl (https://www.buienradar.nl)",
     FORECAST_SOURCE_WUNDERGROUND: "Forecast: Weather Underground / The Weather Company",
     FORECAST_SOURCE_METNO: "Forecast: MET Norway (CC BY 4.0)",
     FORECAST_SOURCE_OPENMETEO: "Forecast: Open-Meteo.com (CC BY 4.0)",

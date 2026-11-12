@@ -72,7 +72,7 @@ def make_entry(**overrides: Any) -> MockConfigEntry:
         CONF_API_KEY_SOURCE: API_KEY_SOURCE_MANUAL,
         CONF_SCAN_INTERVAL: 5,
         CONF_CITY: "",
-        CONF_FORECAST_SOURCE: "auto",
+        CONF_FORECAST_SOURCE: "wunderground",
     }
     data.update(overrides.pop("data", {}))
     return MockConfigEntry(

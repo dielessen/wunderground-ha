@@ -35,6 +35,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_STATION_ID,
     DOMAIN,
+    FORECAST_SOURCES,
 )
 from .coordinator import WundergroundConfigEntry, WundergroundPWSCoordinator
 from .forecast import ForecastCoordinator
@@ -194,4 +195,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: WundergroundConfigEntr
             version=3,
             unique_id=unique_id if entry.unique_id != unique_id else entry.unique_id,
         )
+    if entry.version < 4:
+        data, options = dict(entry.data), dict(entry.options)
+        source = get_setting(entry, CONF_FORECAST_SOURCE, DEFAULT_FORECAST_SOURCE)
+        if source not in FORECAST_SOURCES:
+            source = DEFAULT_FORECAST_SOURCE
+        data[CONF_FORECAST_SOURCE] = source
+        options.pop(CONF_FORECAST_SOURCE, None)
+        hass.config_entries.async_update_entry(entry, data=data, options=options, version=4)
     return True

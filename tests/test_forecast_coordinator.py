@@ -39,6 +39,7 @@ async def test_coords_available_immediately_after_restart_within_ttl(hass, freez
     )
     await Store(hass, 1, f"{DOMAIN}.forecast.{entry.entry_id}").async_save(
         {
+            "selection": ["wunderground", "best_match", "Kaposvár", "HU"],
             "daily": [],
             "hourly": [],
             "source": "openmeteo",

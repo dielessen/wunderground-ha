@@ -54,6 +54,8 @@ from .const import (
     ATTRIBUTION_FORECAST,
     ATTRIBUTION_WU,
     FORECAST_SOURCE_BLEND,
+    FORECAST_SOURCE_BUIENRADAR,
+    FORECAST_SOURCE_WUNDERGROUND,
 )
 from .coordinator import WundergroundConfigEntry, WundergroundPWSCoordinator
 from .entity import build_device_info
@@ -98,6 +100,8 @@ class WundergroundPWSWeather(
             hourly_coordinator=forecast,
         )
         self._forecast = forecast
+        if forecast.source in (FORECAST_SOURCE_WUNDERGROUND, FORECAST_SOURCE_BUIENRADAR):
+            self._attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
         # Format kept from earlier versions (do not change).
         self._attr_unique_id = f"{coordinator.station_id}_weather"
         self._attr_device_info = build_device_info(coordinator.station_id)
